@@ -1,54 +1,60 @@
-//package com.gym.service.impl;
-//
-//import com.gym.service.MailService;
-//import lombok.extern.slf4j.Slf4j;
-//import org.springframework.beans.factory.annotation.Autowired;
-//import org.springframework.mail.javamail.JavaMailSender;
-//import org.springframework.mail.javamail.MimeMessageHelper;
-//import org.springframework.messaging.MessagingException;
-//import org.springframework.stereotype.Service;
-//
-//
-//@Service
-//@Slf4j
-//public class MailServiceImpl implements MailService {
-//
-//    @Autowired
-//    private JavaMailSender mailSender;
-//
-//    @Override
-//    public void sendVerificationCode(String toEmail, String code) {
-//        String subject = "Fitness App - 验证码";
-//        String text = "您好，\n\n您的验证码是: " + code + "\n\n请在10分钟内完成验证。";
-//        sendMail(toEmail, subject, text);
-//    }
-//
-//    @Override
-//    public void sendAdminNotification(String adminEmail, String message) {
-//        String subject = "有新用户待审核";
-//        String text = "尊敬的管理员，\n\n" + message +
-//                "\n请登录后台管理系统进行审核。\n\n此致";
-//        sendMail(adminEmail, subject, text);
-//    }
-//
-//    /**
-//     * 通用的发送邮件方法
-//     */
-//    private void sendMail(String to, String subject, String text) {
-//        try {
-//            MimeMessage message = mailSender.createMimeMessage();
-//            // true表示需要创建一个multipart message
-//            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-//            // 发件人可以与 spring.mail.username 保持一致，也可自定义别名(需邮箱支持)
-//            helper.setFrom("你的QQ邮箱@qq.com");
-//            helper.setTo(to);
-//            helper.setSubject(subject);
-//            helper.setText(text, false);
-//
-//            mailSender.send(message);
-//            log.info("邮件发送成功: to={}, subject={}", to, subject);
-//        } catch (MessagingException e) {
-//            log.error("发送邮件失败: to={}, subject={}, 异常={}", to, subject, e.getMessage());
-//        }
-//    }
-//}
+package com.gym.service.impl;
+
+import javax.mail.MessagingException;
+import javax.mail.internet.MimeMessage;
+
+import com.gym.service.MailService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.stereotype.Service;
+
+@Service
+@Slf4j
+public class MailServiceImpl implements MailService {
+
+    @Autowired
+    private JavaMailSender mailSender;
+
+    @Override
+    public void sendVerificationCode(String toEmail, String code) {
+        String subject = "Fitness App - Verification Code";
+        String text = "Hello,\n\nYour verification code is: " + code + "\n\nPlease complete the verification within 10 minutes.";
+        sendMail(toEmail, subject, text);
+    }
+
+    @Override
+    public void sendAdminNotification(String adminEmail, String message) {
+        String subject = "New User Pending Review";
+        String text = "Dear Administrator,\n\n" + message +
+                "\nPlease log in to the admin system to review the new user.\n\nBest regards";
+        sendMail(adminEmail, subject, text);
+    }
+
+    /**
+     * General method for sending emails
+     */
+    private void sendMail(String to, String subject, String text) {
+        try {
+            // 1. 创建邮件对象
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            // 2. 设置发件人、收件人、标题、内容
+            helper.setFrom("yourgmailEmail@gmail.com"); // 需与 spring.mail.username 对应
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(text, false);
+
+            // 3. 发送邮件
+            mailSender.send(message);
+            log.info("Email sent successfully: to={}, subject={}", to, subject);
+
+        } catch (MessagingException e) {
+            // 只捕获 javax.mail.MessagingException 即可
+            log.error("Failed to send email: to={}, subject={}, error={}", to, subject, e.getMessage());
+            // 若有需要，也可以抛出 RuntimeException 或做其他处理
+        }
+    }
+}

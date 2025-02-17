@@ -9,6 +9,8 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -19,6 +21,15 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 // 一共两个过滤器
 // 先执行自定义的 JwtAuthenticationFilter 过滤器，再执行 UsernamePasswordAuthenticationFilter 过滤器
 public class SecurityConfig {
+
+    /**
+     * 声明一个 PasswordEncoder Bean
+     */
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        // 常用的 BCrypt
+        return new BCryptPasswordEncoder();
+    }
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 

@@ -1,16 +1,60 @@
 server:
   port: 8080
 
+# 连本地mysql
 spring:
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://mysql:3306/webCloud?serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://localhost:3306/gym_database?serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true
     username: root
-    password: 123456
+    password: Aa1401545387
+
+# 连docker
+#spring:
+#  datasource:
+#    type: com.alibaba.druid.pool.DruidDataSource
+#    driver-class-name: com.mysql.cj.jdbc.Driver
+#    url: jdbc:mysql://mysql:3306/webCloud?serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true
+#    username: root
+#    password: Aa1401545387
+  #临时解决方案
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: wxinran543@gmail.com      # 替换为你的 Gmail 邮箱地址
+    password: dlgyysvqolbcljep          # 替换为你的 Gmail 应用专用密码
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          debug: true
+
 jwt:
   secret: "YourJWTSecretKey"
   expiration: 86400000
+
+mybatis:
+  #mapper配置文件
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.gym.entity
+  #configuration:
+    #开启驼峰命名
+#    map-underscore-to-camel-case: true
+
+logging:
+  level:
+    com:
+      gym:
+        mapper: debug
+        service: info
+        controller: info
 
 #server:
 #  port: 8080
@@ -26,22 +70,6 @@ jwt:
 #      url: jdbc:mysql://${sky.datasource.host}:${sky.datasource.port}/${sky.datasource.database}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
 #      username: ${sky.datasource.username}
 #      password: ${sky.datasource.password}
-
-mybatis:
-  #mapper配置文件
-  mapper-locations: classpath:mapper/*.xml
-  type-aliases-package: com.gym.entity
-  configuration:
-    #开启驼峰命名
-#    map-underscore-to-camel-case: true
-
-logging:
-  level:
-    com:
-      gym:
-        mapper: debug
-        service: info
-        controller: info
 
 #sky:
 #  jwt:

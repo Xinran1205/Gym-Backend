@@ -17,26 +17,37 @@ public class MyMetaObjecthandler implements MetaObjectHandler {
      */
     //这两个方法都是重写的父类方法，都是MP写好的方法
     @Override
+    // 这个地方好像必须得所有字段都得有，不然会报错！！！！！！！！！！所以要先校验
     public void insertFill(MetaObject metaObject) {
         log.info("公共字段自动填充[insert]...");
         log.info(metaObject.toString());
-        metaObject.setValue("createTime", LocalDateTime.now());
-        metaObject.setValue("updateTime",LocalDateTime.now());
-        metaObject.setValue("recordedAt", LocalDateTime.now());
-        metaObject.setValue("sentAt", LocalDateTime.now());
+        if (metaObject.hasSetter("createTime")) {
+            metaObject.setValue("createTime", LocalDateTime.now());
+        }
+        if (metaObject.hasSetter("updateTime")) {
+            metaObject.setValue("updateTime", LocalDateTime.now());
+        }
+        if (metaObject.hasSetter("recordedAt")) {
+            metaObject.setValue("recordedAt", LocalDateTime.now());
+        }
+        if (metaObject.hasSetter("sentAt")) {
+            metaObject.setValue("sentAt", LocalDateTime.now());
+        }
+        if (metaObject.hasSetter("createUser")) {
+            metaObject.setValue("createUser", SecurityContextHolder.
+                    getContext().
+                    getAuthentication().getPrincipal());
+        }
+        if (metaObject.hasSetter("updateUser")) {
+            metaObject.setValue("updateUser", SecurityContextHolder.
+                    getContext().
+                    getAuthentication().getPrincipal());
+        }
         //这里很重要，我们这里获得不了session那么我们怎么获取当前用户id呢？
         //
 //        metaObject.setValue("createUser", BaseContext.getCurrentId());
 //        metaObject.setValue("updateUser",BaseContext.getCurrentId());
 //        SecurityContextHolder.getContext()
-        //
-        metaObject.setValue("createUser", SecurityContextHolder.
-                getContext().
-                getAuthentication().getPrincipal());
-        metaObject.setValue("updateUser",SecurityContextHolder.
-                getContext().
-                getAuthentication().getPrincipal());
-
     }
 
     /**
