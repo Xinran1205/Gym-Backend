@@ -36,6 +36,7 @@ public class User implements Serializable {
     private AccountStatus accountStatus = AccountStatus.Pending;
 
     @TableField("email_verified")
+    // 这个字段后序可以删除，没用
     private Boolean emailVerified = false;
 
     @TableField(value = "created_at", fill = FieldFill.INSERT)
