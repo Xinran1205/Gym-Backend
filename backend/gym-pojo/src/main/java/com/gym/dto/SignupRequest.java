@@ -25,4 +25,11 @@ public class SignupRequest {
     @NotNull(message = "Date of birth cannot be null")
     @Past(message = "Date of birth must be in the past")
     private Date dateOfBirth;
+
+    // 新增：腾讯验证码相关字段（由前端验证码组件返回）
+    @NotBlank(message = "Captcha ticket cannot be blank")
+    private String captchaTicket;
+
+    @NotBlank(message = "Captcha randstr cannot be blank")
+    private String captchaRandstr;
 }

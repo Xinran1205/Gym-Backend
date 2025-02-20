@@ -1,6 +1,7 @@
 package com.gym.AOP;
 
 import com.gym.exception.CustomException;
+import com.gym.util.IpUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -25,6 +26,9 @@ public class RateLimitAspect {
     @Autowired
     private HttpServletRequest request;
 
+    @Autowired
+    private IpUtil ipUtil;
+
     /**
      * 配置切点：
      * 拦截所有被 @RateLimit 注解标记的方法
@@ -39,7 +43,7 @@ public class RateLimitAspect {
     public Object around(ProceedingJoinPoint joinPoint, RateLimit rateLimit) throws Throwable {
 
         // 1. 构造限流Key：可用 客户端IP + methodSignature
-        String clientIp = getClientIp(request);
+        String clientIp = ipUtil.getClientIp(request);
         String methodName = joinPoint.getSignature().toShortString();
         String redisKey = "RATE_LIMIT:" + methodName + ":" + clientIp;
 
@@ -66,18 +70,18 @@ public class RateLimitAspect {
         return joinPoint.proceed();
     }
 
-    private String getClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("Proxy-Client-IP");
-        }
-        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("WL-Proxy-Client-IP");
-        }
-        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-        // 如果有多个IP，取第一个
-        return ip.split(",")[0].trim();
-    }
+//    private String getClientIp(HttpServletRequest request) {
+//        String ip = request.getHeader("X-Forwarded-For");
+//        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+//            ip = request.getHeader("Proxy-Client-IP");
+//        }
+//        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+//            ip = request.getHeader("WL-Proxy-Client-IP");
+//        }
+//        if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
+//            ip = request.getRemoteAddr();
+//        }
+//        // 如果有多个IP，取第一个
+//        return ip.split(",")[0].trim();
+//    }
 }

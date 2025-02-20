@@ -1,11 +1,12 @@
 package com.gym.controller;
 
 import com.gym.AOP.RateLimit;
-import com.gym.dto.LoginRequest;
+import com.gym.bloomFilter.BloomFilterUtil;
+import com.gym.dto.*;
+import com.gym.service.impl.RedisCacheServiceImpl;
+import com.gym.util.IpUtil;
+import com.gym.util.TencentCaptchaUtil;
 import com.gym.vo.LoginResponse;
-import com.gym.dto.SignupRequest;
-import com.gym.dto.VerifyCodeRequest;
-import com.gym.dto.PendingVerification; // 你自定义的 PendingVerification DTO
 import com.gym.entity.User;
 import com.gym.enumeration.ErrorCode;
 import com.gym.exception.CustomException;
@@ -19,6 +20,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 import java.util.concurrent.TimeUnit;
 
@@ -39,31 +41,58 @@ public class UserController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private BloomFilterUtil bloomFilterUtil;
+
+    @Autowired
+    private RedisCacheServiceImpl redisCacheService;
+
+    @Autowired
+    private IpUtil ipUtil;
+
     /**
      * 新增：RedisTemplate，用于存储 PendingVerification
      */
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
+    @Autowired
+    private TencentCaptchaUtil tencentCaptchaUtil;
+
     /**
      * 第一步：前端填写(邮箱+密码+其他资料)，后端发送验证码
      */
-    // TODO 测试@Valid是否正确！
     @PostMapping("/signup")
     // 限流注解，60 秒内最多 5 次请求
+    // TODO 测试限流是否正确
     @RateLimit(timeWindowSeconds = 60, maxRequests = 5,
             message = "Too many signup requests. Please try again later.")
-    public RestResult<?> signup(@Valid @RequestBody SignupRequest request) {
+    public RestResult<?> signup(@Valid @RequestBody SignupRequest request, HttpServletRequest httpRequest) {
         log.info("signup request: {}", request);
 
-        // 1. 检查邮箱是否已被注册
+
+        // 在这里加上验证码拼图校验，如果验证码不正确，不往下执行
+        // 1. 调用腾讯验证码接口进行校验
+        // 使用工具函数获取真实的客户端IP
+        String clientIp = ipUtil.getClientIp(httpRequest);
+
+        boolean captchaValid = tencentCaptchaUtil.
+                verifyCaptcha(request.getCaptchaTicket(), request.getCaptchaRandstr(), clientIp);
+        if (!captchaValid) {
+            throw new CustomException(ErrorCode.BAD_REQUEST, "Captcha verification failed.");
+        }
+
+
+
+
+        // 2. 检查邮箱是否已被注册
         User existing = userService.getByEmail(request.getEmail());
         if (existing != null) {
             // 抛出异常 -> 全局异常处理器返回英文提示
             throw new CustomException(ErrorCode.BAD_REQUEST, "Email is already registered.");
         }
 
-        // 2. 生成验证码并创建 PendingVerification 对象
+        // 3. 生成验证码并创建 PendingVerification 对象
         String code = generateRandomCode();
         PendingVerification pv = new PendingVerification();
         // 封装用户注册请求和验证码信息
@@ -71,11 +100,11 @@ public class UserController {
         pv.setVerificationCode(code);
         pv.setCreateTime(System.currentTimeMillis());
 
-        // 3. 保存到 Redis，设置一个 5 分钟的过期时间，同理验证码就是 5 分钟有效
+        // 4. 保存到 Redis，设置一个 5 分钟的过期时间，同理验证码就是 5 分钟有效
         String redisKey = "SIGNUP_PENDING_" + request.getEmail();
         redisTemplate.opsForValue().set(redisKey, pv, 5, TimeUnit.MINUTES);
 
-        // 4. 发送邮件
+        // 5. 发送邮件
         mailService.sendVerificationCode(request.getEmail(), code);
 
         return RestResult.success(null, "Verification code has been sent to your email. Please enter it to complete registration.");
@@ -91,6 +120,7 @@ public class UserController {
 
         String redisKey = "SIGNUP_PENDING_" + email;
         // 从Redis里拿到 PendingVerification
+        // 不需要考虑这个redis穿透问题，不存在就是过期了，不会查询数据库！！！
         PendingVerification pv = (PendingVerification) redisTemplate.opsForValue().get(redisKey);
         if (pv == null) {
             throw new CustomException(ErrorCode.BAD_REQUEST, "Verification code expired or not found. Please sign up again.");
@@ -115,12 +145,14 @@ public class UserController {
         newUser.setEmailVerified(true);
         userService.createUser(newUser);
 
-        // 验证完成后，从Redis移除
+        // 验证完成后，从Redis移除,这个是防止重复注册！
         redisTemplate.delete(redisKey);
 
-//        // 不需要这个功能
-//        mailService.sendAdminNotification("admin@fitness.com",
-//                "A new user requires approval: " + req.getEmail());
+        // 添加到redis
+        redisCacheService.updateUser(newUser);
+
+        // 添加到布隆过滤器
+        bloomFilterUtil.addUserToBloomFilter(newUser.getUserID());
 
         return RestResult.success(null, "Registration successful. Awaiting admin approval.");
     }

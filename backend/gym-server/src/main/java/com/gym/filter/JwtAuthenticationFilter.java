@@ -3,6 +3,7 @@ package com.gym.filter;
 import com.alibaba.fastjson.JSON;
 import com.gym.dto.UserCacheDTO;
 import com.gym.entity.User;
+import com.gym.service.RedisCacheService;
 import com.gym.service.UserService;
 import com.gym.util.JwtUtils;
 import com.gym.util.UserRoleUtil;
@@ -43,6 +44,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private JwtUtils jwtUtils;
 
     @Autowired
+    private RedisCacheService redisCacheService;
+
+    @Autowired
     private UserService userService;
 
     @Autowired
@@ -67,36 +71,39 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String roleStr = (String) claims.get("role");
 
             try {
-                Long userId = Long.valueOf(userIdStr);
-                // 根据 userId 从数据库中查找用户，并比对数据库中用户的角色与 Token 中的 role，
-                // 确保 Token 里的信息与当前数据库数据一致（例如防止用户权限在 Token 签发后被变更）。
-
-                // 数据库查询的性能问题
-                //
-                // 每个请求都查询数据库来获取最新用户信息，如果流量大可能会对性能造成影响。
-                // 可以考虑引入缓存机制，或只在需要更新权限信息时查询数据库，但这要视具体业务需求而定。
-
-                // 定义 Redis 缓存键，建议统一使用前缀，例如 "USER:"
-                String key = "USER:" + userId;
-
-                // 尝试从 Redis 获取用户数据（假设使用 JSON 格式存储）
-                UserCacheDTO userCacheDTO = (UserCacheDTO)redisTemplate.opsForValue().get(key);
-                User user = null;
-                // redis中有数据
-                if(userCacheDTO != null) {
-                    user = userCacheDTO.toEntity();
-                }else{
-                    // TODO 这里要防止缓存穿透，假设数据库中没有数据，如何防止缓存穿透！
-                    // redis中没有数据
-                    // 将数据库查出来的user转换成userCacheDTO
-                    user = userService.getUserById(userId);
-                    // 数据库中有数据
-                    if (user != null) {
-                        // 将数据库查出来的user转换成userCacheDTO放入redis
-                        UserCacheDTO tmp = UserCacheDTO.fromEntity(user);
-                        redisTemplate.opsForValue().set(key, tmp, 10, TimeUnit.MINUTES);
-                    }
-                }
+                  Long userId = Long.valueOf(userIdStr);
+//                // 根据 userId 从数据库中查找用户，并比对数据库中用户的角色与 Token 中的 role，
+//                // 确保 Token 里的信息与当前数据库数据一致（例如防止用户权限在 Token 签发后被变更）。
+//
+//                // 数据库查询的性能问题
+//                //
+//                // 每个请求都查询数据库来获取最新用户信息，如果流量大可能会对性能造成影响。
+//                // 可以考虑引入缓存机制，或只在需要更新权限信息时查询数据库，但这要视具体业务需求而定。
+//
+//                // 定义 Redis 缓存键，建议统一使用前缀，例如 "USER:"
+//                String key = "USER:" + userId;
+//
+//                // 尝试从 Redis 获取用户数据（假设使用 JSON 格式存储）
+//                // TODO 这里感觉要确保缓存的一致性，如果数据库中的数据变了，缓存中的数据也要变
+//                // 当后续有更新用户信息的操作时，需要同时更新数据库和缓存。！
+//                UserCacheDTO userCacheDTO = (UserCacheDTO)redisTemplate.opsForValue().get(key);
+//                User user = null;
+//                // redis中有数据
+//                if(userCacheDTO != null) {
+//                    user = userCacheDTO.toEntity();
+//                }else{
+//                    // TODO 这里要防止缓存穿透，假设数据库中没有数据，如何防止缓存穿透！
+//                    // redis中没有数据
+//                    // 将数据库查出来的user转换成userCacheDTO
+//                    user = userService.getUserById(userId);
+//                    // 数据库中有数据
+//                    if (user != null) {
+//                        // 将数据库查出来的user转换成userCacheDTO放入redis
+//                        UserCacheDTO tmp = UserCacheDTO.fromEntity(user);
+//                        redisTemplate.opsForValue().set(key, tmp, 10, TimeUnit.MINUTES);
+//                    }
+//                }
+                User user = redisCacheService.getUser(userId);
 
                 // User user = userService.getUserById(userId);
                 if (user != null && user.getRole().name().equals(roleStr)) {
