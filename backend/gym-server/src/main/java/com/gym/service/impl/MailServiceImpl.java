@@ -20,7 +20,7 @@ public class MailServiceImpl implements MailService {
     @Override
     public void sendVerificationCode(String toEmail, String code) {
         String subject = "Fitness App - Verification Code";
-        String text = "Hello,\n\nYour verification code is: " + code + "\n\nPlease complete the verification within 10 minutes.";
+        String text = "Hello,\n\nYour verification code is: " + code + "\n\nPlease complete the verification within 5 minutes.";
         sendMail(toEmail, subject, text);
     }
 

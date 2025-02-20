@@ -9,6 +9,9 @@ spring:
     url: jdbc:mysql://localhost:3306/gym_database?serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true
     username: root
     password: Aa1401545387
+  redis:
+    host:localhost
+    port:6379
 
 # 连docker
 #spring:
@@ -58,6 +61,8 @@ logging:
 
 knife4j:
   locale: en
+
+
 #server:
 #  port: 8080
 #

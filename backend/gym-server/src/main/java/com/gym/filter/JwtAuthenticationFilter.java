@@ -1,5 +1,7 @@
 package com.gym.filter;
 
+import com.alibaba.fastjson.JSON;
+import com.gym.dto.UserCacheDTO;
 import com.gym.entity.User;
 import com.gym.service.UserService;
 import com.gym.util.JwtUtils;
@@ -7,6 +9,7 @@ import com.gym.util.UserRoleUtil;
 import io.jsonwebtoken.Claims;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -18,6 +21,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 每次请求前执行:
@@ -40,6 +44,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private RedisTemplate redisTemplate;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -68,7 +75,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 //
                 // 每个请求都查询数据库来获取最新用户信息，如果流量大可能会对性能造成影响。
                 // 可以考虑引入缓存机制，或只在需要更新权限信息时查询数据库，但这要视具体业务需求而定。
-                User user = userService.getUserById(userId);
+
+                // 定义 Redis 缓存键，建议统一使用前缀，例如 "USER:"
+                String key = "USER:" + userId;
+
+                // 尝试从 Redis 获取用户数据（假设使用 JSON 格式存储）
+                UserCacheDTO userCacheDTO = (UserCacheDTO)redisTemplate.opsForValue().get(key);
+                User user = null;
+                // redis中有数据
+                if(userCacheDTO != null) {
+                    user = userCacheDTO.toEntity();
+                }else{
+                    // TODO 这里要防止缓存穿透，假设数据库中没有数据，如何防止缓存穿透！
+                    // redis中没有数据
+                    // 将数据库查出来的user转换成userCacheDTO
+                    user = userService.getUserById(userId);
+                    // 数据库中有数据
+                    if (user != null) {
+                        // 将数据库查出来的user转换成userCacheDTO放入redis
+                        UserCacheDTO tmp = UserCacheDTO.fromEntity(user);
+                        redisTemplate.opsForValue().set(key, tmp, 10, TimeUnit.MINUTES);
+                    }
+                }
+
+                // User user = userService.getUserById(userId);
                 if (user != null && user.getRole().name().equals(roleStr)) {
                     // 构建Security认证对象
                     UsernamePasswordAuthenticationToken authenticationToken =
@@ -88,6 +118,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
 
+        // 让无效 Token 直接跳过认证，然后由 Security 决定是否 401/403，例如他后序的 controller
+        // @PreAuthorize("hasRole('Admin')") 会拒绝访问
         // 放行
         filterChain.doFilter(request, response);
     }

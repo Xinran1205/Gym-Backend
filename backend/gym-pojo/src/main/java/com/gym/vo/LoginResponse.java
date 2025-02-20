@@ -1,4 +1,4 @@
-package com.gym.dto;
+package com.gym.vo;
 
 import com.gym.entity.User;
 import lombok.Data;

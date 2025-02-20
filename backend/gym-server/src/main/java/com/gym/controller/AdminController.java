@@ -5,12 +5,16 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.gym.dto.UserEmail;
 import com.gym.entity.User;
+import com.gym.enumeration.ErrorCode;
+import com.gym.exception.CustomException;
 import com.gym.result.RestResult;
 import com.gym.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
 
 @RestController
 @RequestMapping("/admin")
@@ -22,58 +26,53 @@ public class AdminController {
 
     @Autowired
     private UserService userService;
-    // 管理员审批申请
-    // 返回值：成功或失败
-    // 接收值：申请的用户邮箱
 
+    /**
+     * Approve user application
+     */
     @PostMapping("/approve")
-    public RestResult<?> approveApplication(@RequestBody UserEmail email){
-        // 1. 已经校验了只有管理员才能访问这个接口
-
-        // 2. 根据邮箱找到用户？
-        // 根据id找到用户，修改用户状态，把accountStatus改为AccountStatus.Approved
-        User curUser = userService.getByEmail(email.getEmail());
-        if(curUser == null){
-            return RestResult.error("User not found", null);
-        }
-        curUser.setAccountStatus(User.AccountStatus.Approved);
-        userService.updateById(curUser);
-
-        // 3. 返回成功或失败
-        return RestResult.success("Approved", null);
-    }
-
-    // 查出待审核的用户有多少条，数字返回给前端作为notification
-    @GetMapping("/pendingNum")
-    public RestResult<?> pendingNotification(){
-        // 使用 MyBatis-Plus 的 LambdaQueryWrapper 构造条件查询待审核用户
-        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(User::getAccountStatus, User.AccountStatus.Pending);
-
-        // 直接通过 count 方法查询待审核用户的数量
-        int pendingNum = userService.count(queryWrapper);
-
-        // 将查询结果返回给前端
-        return RestResult.success(pendingNum, "Pending users number");
-    }
-
-    // 拒绝用户申请
-    // 设置成Suspended
-    @PostMapping("/reject")
-    public RestResult<?> rejectApplication(@RequestBody Long userID){
-        // 构造更新条件：根据用户ID找到记录，并将accountStatus设置为Rejected
+    public RestResult<?> approveApplication(@Valid @RequestBody UserEmail userEmail) {
         LambdaUpdateWrapper<User> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(User::getUserID, userID)
-                .set(User::getAccountStatus, User.AccountStatus.Suspended);
+        updateWrapper.eq(User::getEmail, userEmail.getEmail())
+                .set(User::getAccountStatus, User.AccountStatus.Approved);
 
-        // 执行更新操作，不需要先查询
         boolean updateResult = userService.update(updateWrapper);
         if (!updateResult) {
-            return RestResult.error("Update failed", null);
+            // If user not found or DB error
+            throw new CustomException(ErrorCode.BAD_REQUEST, "Failed to approve. Possibly user not found.");
         }
 
-        // 返回操作结果
-        return RestResult.success("Rejected", null);
+        return RestResult.success("Approved", "User application approved successfully.");
     }
-    
+
+    /**
+     * Get the number of pending users
+     */
+    @GetMapping("/pendingNum")
+    public RestResult<?> pendingNotification() {
+        // Optionally, you can define getPendingUserCount() in service
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(User::getAccountStatus, User.AccountStatus.Pending);
+        int pendingNum = userService.count(queryWrapper);
+
+        return RestResult.success(pendingNum, "Number of pending users retrieved successfully.");
+    }
+
+    /**
+     * Reject user application
+     */
+    @PostMapping("/reject")
+    public RestResult<?> rejectApplication(@Valid @RequestBody UserEmail userEmail) {
+        LambdaUpdateWrapper<User> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(User::getEmail, userEmail.getEmail())
+                .set(User::getAccountStatus, User.AccountStatus.Suspended);
+
+        boolean updateResult = userService.update(updateWrapper);
+        if (!updateResult) {
+            throw new CustomException(ErrorCode.BAD_REQUEST, "Failed to reject. Possibly user not found.");
+        }
+
+        return RestResult.success("Rejected", "User application rejected (suspended) successfully.");
+    }
+
 }
