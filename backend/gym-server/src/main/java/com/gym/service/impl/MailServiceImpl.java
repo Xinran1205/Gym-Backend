@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -17,19 +18,12 @@ public class MailServiceImpl implements MailService {
     @Autowired
     private JavaMailSender mailSender;
 
+    @Async("mailAsyncExecutor")
     @Override
     public void sendVerificationCode(String toEmail, String code) {
         String subject = "Fitness App - Verification Code";
         String text = "Hello,\n\nYour verification code is: " + code + "\n\nPlease complete the verification within 5 minutes.";
         sendMail(toEmail, subject, text);
-    }
-
-    @Override
-    public void sendAdminNotification(String adminEmail, String message) {
-        String subject = "New User Pending Review";
-        String text = "Dear Administrator,\n\n" + message +
-                "\nPlease log in to the admin system to review the new user.\n\nBest regards";
-        sendMail(adminEmail, subject, text);
     }
 
     /**
@@ -57,4 +51,26 @@ public class MailServiceImpl implements MailService {
             // 若有需要，也可以抛出 RuntimeException 或做其他处理
         }
     }
+
+
+    @Async("mailAsyncExecutor")
+    @Override
+    public void sendResetLink(String toEmail, String resetLink) {
+        String subject = "Fitness App - Password Reset Link";
+        String text = "Hello,\n\nPlease click the following link to reset your password:\n" +
+                resetLink + "\n\nThe link is valid for 5 minutes.\n" +
+                "If you did not request a password reset, please ignore this email.";
+        sendMail(toEmail, subject, text);
+    }
+
+
 }
+
+// 废弃
+//    @Override
+//    public void sendAdminNotification(String adminEmail, String message) {
+//        String subject = "New User Pending Review";
+//        String text = "Dear Administrator,\n\n" + message +
+//                "\nPlease log in to the admin system to review the new user.\n\nBest regards";
+//        sendMail(adminEmail, subject, text);
+//    }

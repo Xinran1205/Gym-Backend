@@ -1,6 +1,8 @@
 package com.gym.util;
 
 import com.gym.entity.User;
+import com.gym.enumeration.ErrorCode;
+import com.gym.exception.CustomException;
 import io.jsonwebtoken.*;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Value;
@@ -64,4 +66,41 @@ public class JwtUtils {
                 .parseClaimsJws(token)
                 .getBody();
     }
+
+    /**
+     * 生成重置密码的 JWT Token，建议有效期为 5 分钟
+     */
+    public String generateResetToken(User user) {
+        // 示例：在生成 JWT 时，设置 subject 为用户邮箱，claim 加入用途标识等
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + 5 * 60 * 1000); // 5分钟后过期
+
+        return Jwts.builder()
+                .setSubject(user.getEmail())
+                .claim("type", "reset")
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(SignatureAlgorithm.HS512, secretKey)
+                .compact();
+    }
+
+    /**
+     * 验证重置密码的 JWT Token，返回邮箱或 null（或抛异常）
+     */
+    public String verifyResetToken(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .setSigningKey(secretKey)
+                    .parseClaimsJws(token)
+                    .getBody();
+            // 检查 token 类型是否为 reset
+            if (!"reset".equals(claims.get("type"))) {
+                throw new CustomException(ErrorCode.BAD_REQUEST, "Invalid token type.");
+            }
+            return claims.getSubject(); // 返回邮箱
+        } catch (Exception e) {
+            throw new CustomException(ErrorCode.BAD_REQUEST, "Invalid or expired reset token.");
+        }
+    }
+
 }

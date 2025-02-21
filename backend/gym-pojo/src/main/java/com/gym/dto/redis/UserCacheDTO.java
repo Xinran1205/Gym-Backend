@@ -1,10 +1,11 @@
-package com.gym.dto;
+package com.gym.dto.redis;
 
 import com.gym.entity.User;
 import lombok.Data;
 
 import java.io.Serializable;
 
+// 这个是JWT中redis缓存的用户信息
 @Data
 public class UserCacheDTO implements Serializable {
     private Long userID;

@@ -1,7 +1,7 @@
 package com.gym.service.impl;
 
 import com.gym.bloomFilter.BloomFilterUtil;
-import com.gym.dto.UserCacheDTO;
+import com.gym.dto.redis.UserCacheDTO;
 import com.gym.entity.User;
 import com.gym.service.RedisCacheService;
 import com.gym.service.UserService;

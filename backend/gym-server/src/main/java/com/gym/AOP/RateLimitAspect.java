@@ -69,6 +69,7 @@ public class RateLimitAspect {
         // 3. 继续执行被拦截的方法
         return joinPoint.proceed();
     }
+}
 
 //    private String getClientIp(HttpServletRequest request) {
 //        String ip = request.getHeader("X-Forwarded-For");
@@ -84,4 +85,3 @@ public class RateLimitAspect {
 //        // 如果有多个IP，取第一个
 //        return ip.split(",")[0].trim();
 //    }
-}

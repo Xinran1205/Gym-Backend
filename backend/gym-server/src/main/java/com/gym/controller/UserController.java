@@ -3,6 +3,7 @@ package com.gym.controller;
 import com.gym.AOP.RateLimit;
 import com.gym.bloomFilter.BloomFilterUtil;
 import com.gym.dto.*;
+import com.gym.dto.redis.PendingPasswordReset;
 import com.gym.service.impl.RedisCacheServiceImpl;
 import com.gym.util.IpUtil;
 import com.gym.util.TencentCaptchaUtil;
@@ -74,16 +75,13 @@ public class UserController {
         // 在这里加上验证码拼图校验，如果验证码不正确，不往下执行
         // 1. 调用腾讯验证码接口进行校验
         // 使用工具函数获取真实的客户端IP
-        String clientIp = ipUtil.getClientIp(httpRequest);
-
-        boolean captchaValid = tencentCaptchaUtil.
-                verifyCaptcha(request.getCaptchaTicket(), request.getCaptchaRandstr(), clientIp);
-        if (!captchaValid) {
-            throw new CustomException(ErrorCode.BAD_REQUEST, "Captcha verification failed.");
-        }
-
-
-
+//        String clientIp = ipUtil.getClientIp(httpRequest);
+//
+//        boolean captchaValid = tencentCaptchaUtil.
+//                verifyCaptcha(request.getCaptchaTicket(), request.getCaptchaRandstr(), clientIp);
+//        if (!captchaValid) {
+//            throw new CustomException(ErrorCode.BAD_REQUEST, "Captcha verification failed.");
+//        }
 
         // 2. 检查邮箱是否已被注册
         User existing = userService.getByEmail(request.getEmail());
@@ -187,6 +185,59 @@ public class UserController {
 
         return RestResult.success(resp, "Login success.");
     }
+
+
+    @PostMapping("/forgot-password")
+    @RateLimit(timeWindowSeconds = 60, maxRequests = 5,
+            message = "Too many reset password requests. Please try again later.")
+    public RestResult<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        log.info("forgotPassword request: {}", request);
+
+        User user = userService.getByEmail(request.getEmail());
+        if (user == null) {
+            // 出于安全原因，统一返回成功信息（或提示已发送）
+            return RestResult.success(null, "If the email is registered, a reset link has been sent.");
+        }
+
+        // 生成重置密码的 JWT Token
+        String resetToken = jwtUtils.generateResetToken(user);
+
+        // 生成重置链接（前端路由地址需自行配置）
+        String resetLink = "https://yourapp.com/reset-password?token=" + resetToken;
+
+        // 异步发送邮件
+        mailService.sendResetLink(request.getEmail(), resetLink);
+
+        return RestResult.success(null, "A password reset link has been sent to your email.");
+    }
+
+    /**
+     * 忘记密码：验证重置验证码 & 重置密码
+     */
+    @PostMapping("/reset-password")
+    public RestResult<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        log.info("resetPassword request with token: {}", request.getToken());
+
+        // 通过 JWT 验证 token，有效则返回邮箱
+        String email = jwtUtils.verifyResetToken(request.getToken());
+
+        User user = userService.getByEmail(email);
+        if (user == null) {
+            throw new CustomException(ErrorCode.BAD_REQUEST, "Email is not registered.");
+        }
+
+        // 更新密码（使用 bcrypt 加密）
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userService.updateById(user);
+
+        // 同步更新缓存
+        redisCacheService.updateUser(user);
+
+        log.info("User password reset success, email={}", email);
+        return RestResult.success(null, "Password reset successful. Please log in with your new password.");
+    }
+
+
 
     // ============== 内部工具方法 ==============
     private String generateRandomCode() {

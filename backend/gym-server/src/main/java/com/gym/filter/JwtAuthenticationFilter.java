@@ -1,7 +1,5 @@
 package com.gym.filter;
 
-import com.alibaba.fastjson.JSON;
-import com.gym.dto.UserCacheDTO;
 import com.gym.entity.User;
 import com.gym.service.RedisCacheService;
 import com.gym.service.UserService;
@@ -22,7 +20,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 每次请求前执行:
