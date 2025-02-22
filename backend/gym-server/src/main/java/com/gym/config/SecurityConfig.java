@@ -22,15 +22,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 // 先执行自定义的 JwtAuthenticationFilter 过滤器，再执行 UsernamePasswordAuthenticationFilter 过滤器
 public class SecurityConfig {
 
-    /**
-     * 声明一个 PasswordEncoder Bean
-     */
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        // 常用的 BCrypt
-        return new BCryptPasswordEncoder();
-    }
-
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     // 在 Spring 框架中，如果一个类只有一个构造函数，那么 Spring 会自动使用这个构造函数进行依赖注入，不需要再使用 @Autowired 注解。

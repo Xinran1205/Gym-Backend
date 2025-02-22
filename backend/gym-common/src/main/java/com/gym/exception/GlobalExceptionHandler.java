@@ -38,6 +38,7 @@ public class GlobalExceptionHandler {
     }
 
     // ====== 新增：处理校验失败异常 ======
+    // 通常使用 @Valid 注解校验 DTO 时发生错误,用来抛异常。前端传来的数据是否符合要求，不符合就会抛出异常
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public RestResult<?> handleValidationException(MethodArgumentNotValidException ex) {
         // 从异常对象中拿到所有字段错误

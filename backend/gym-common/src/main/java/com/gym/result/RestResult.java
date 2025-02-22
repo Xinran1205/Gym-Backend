@@ -9,7 +9,7 @@ import java.util.Map;
 public class RestResult<T> {
     private Integer code; // Code: 200 indicates success, 0 and other numbers indicate failure
 
-    private String msg; // Error message
+    private String message; // Error message
 
     private T data; // Data
 
@@ -17,7 +17,7 @@ public class RestResult<T> {
 
     public static <T> RestResult<T> success(T object, String msg) {
         RestResult<T> r = new RestResult<T>();
-        r.msg = msg;
+        r.message = msg;
         r.data = object;
         r.code = 200;
         return r;
@@ -25,7 +25,7 @@ public class RestResult<T> {
 
     public static <T> RestResult<T> error(String msg, Integer code) {
         RestResult r = new RestResult();
-        r.msg = msg;
+        r.message = msg;
         r.code = code;
         return r;
     }

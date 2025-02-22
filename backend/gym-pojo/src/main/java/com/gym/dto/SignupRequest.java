@@ -1,11 +1,16 @@
 package com.gym.dto;
 
-import lombok.Data;
+import com.gym.entity.User;
+import lombok.*;
 
 import javax.validation.constraints.*;
 import java.util.Date;
 
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@ToString
 public class SignupRequest {
     @NotBlank(message = "Email cannot be blank")
     @Email(message = "Email is invalid")
@@ -25,6 +30,9 @@ public class SignupRequest {
     @NotNull(message = "Date of birth cannot be null")
     @Past(message = "Date of birth must be in the past")
     private Date dateOfBirth;
+
+    @NotNull(message = "Role cannot be null")
+    private User.Role role;
 
     // 新增：腾讯验证码相关字段（由前端验证码组件返回）
     @NotBlank(message = "Captcha ticket cannot be blank")

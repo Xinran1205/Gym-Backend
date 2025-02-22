@@ -1,10 +1,14 @@
 package com.gym.dto.redis;
 
-import lombok.Data;
+import lombok.*;
 
 import java.io.Serializable;
 
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@ToString
 public class PendingPasswordReset implements Serializable {
     private String email;
     private String resetCode;   // 验证码

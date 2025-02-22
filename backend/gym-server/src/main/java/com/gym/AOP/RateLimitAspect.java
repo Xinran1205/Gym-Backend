@@ -26,9 +26,6 @@ public class RateLimitAspect {
     @Autowired
     private HttpServletRequest request;
 
-    @Autowired
-    private IpUtil ipUtil;
-
     /**
      * 配置切点：
      * 拦截所有被 @RateLimit 注解标记的方法
@@ -43,7 +40,7 @@ public class RateLimitAspect {
     public Object around(ProceedingJoinPoint joinPoint, RateLimit rateLimit) throws Throwable {
 
         // 1. 构造限流Key：可用 客户端IP + methodSignature
-        String clientIp = ipUtil.getClientIp(request);
+        String clientIp = IpUtil.getClientIp(request);
         String methodName = joinPoint.getSignature().toShortString();
         String redisKey = "RATE_LIMIT:" + methodName + ":" + clientIp;
 

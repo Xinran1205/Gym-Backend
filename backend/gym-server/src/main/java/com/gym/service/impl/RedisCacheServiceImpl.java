@@ -1,6 +1,7 @@
 package com.gym.service.impl;
 
 import com.gym.bloomFilter.BloomFilterUtil;
+import com.gym.dao.UserDao;
 import com.gym.dto.redis.UserCacheDTO;
 import com.gym.entity.User;
 import com.gym.service.RedisCacheService;
@@ -28,8 +29,9 @@ public class RedisCacheServiceImpl implements RedisCacheService {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
+    // ✅ 直接注入 UserDao（或 UserMapper），而非 UserService
     @Autowired
-    private UserService userService;
+    private UserDao userDao;
 
     @Autowired
     private BloomFilterUtil bloomFilterUtil;
@@ -67,7 +69,7 @@ public class RedisCacheServiceImpl implements RedisCacheService {
                     return dto.toEntity();
                 }
                 // 查询数据库
-                User user = userService.getUserById(userId);
+                User user = userDao.selectById(userId);
                 if (user != null) {
                     // 设置随机过期时间，防止缓存大量同时失效
 //                    int baseTtl = 600; // 基础10分钟

@@ -1,12 +1,16 @@
 package com.gym.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
-import lombok.Data;
+import lombok.*;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@ToString
 @TableName("training_sessions")
 public class TrainingSession implements Serializable {
 

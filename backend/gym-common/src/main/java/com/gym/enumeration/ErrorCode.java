@@ -7,6 +7,7 @@ public enum ErrorCode {
     NOT_FOUND(404, "Not Found"),
     INTERNAL_SERVER_ERROR(500, "Internal Server Error"),
     TOO_MANY_REQUESTS(429, "Too Many Requests"),
+    UNAUTHORIZED(401, "Unauthorized"),
     // You can add more custom error codes here if needed
     ;
 

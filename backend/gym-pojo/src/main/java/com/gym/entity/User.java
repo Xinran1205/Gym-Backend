@@ -1,13 +1,17 @@
 package com.gym.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
-import lombok.Data;
+import lombok.*;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Date;
 
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@ToString
 @TableName("users")
 public class User implements Serializable {
 
@@ -34,10 +38,6 @@ public class User implements Serializable {
 
     @TableField("account_status")
     private AccountStatus accountStatus = AccountStatus.Pending;
-
-    @TableField("email_verified")
-    // 这个字段后序可以删除，没用
-    private Boolean emailVerified = false;
 
     @TableField(value = "created_at", fill = FieldFill.INSERT)
     private LocalDateTime createTime;

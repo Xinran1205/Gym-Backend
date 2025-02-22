@@ -1,12 +1,16 @@
 package com.gym.dto;
 
-import lombok.Data;
+import lombok.*;
 
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@ToString
 public class ResetPasswordRequest {
 
     @NotBlank(message = "token cannot be blank")

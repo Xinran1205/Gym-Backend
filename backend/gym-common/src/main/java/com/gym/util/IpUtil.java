@@ -5,11 +5,13 @@ import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpServletRequest;
 
-@Component
-@Data
-public class IpUtil {
 
-    public String getClientIp(HttpServletRequest request) {
+public final class IpUtil {
+
+    // 私有构造函数，防止实例化
+    private IpUtil() { }
+
+    public static String getClientIp(HttpServletRequest request) {
         String ip = request.getHeader("X-Forwarded-For");
         if (ip == null || ip.length() == 0 || "unknown".equalsIgnoreCase(ip)) {
             ip = request.getHeader("Proxy-Client-IP");
