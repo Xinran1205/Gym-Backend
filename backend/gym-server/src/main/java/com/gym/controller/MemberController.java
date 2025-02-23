@@ -1,5 +1,7 @@
 package com.gym.controller;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.gym.dto.TrainerProfileQuery;
 import com.gym.entity.User;
 import com.gym.enumeration.ErrorCode;
 import com.gym.exception.CustomException;
@@ -7,6 +9,7 @@ import com.gym.result.RestResult;
 import com.gym.service.TrainerProfileService;
 import com.gym.service.UserService;
 import com.gym.util.SecurityUtils;
+import com.gym.vo.TrainerProfileVO;
 import com.gym.vo.UserProfileResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +28,17 @@ public class MemberController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private TrainerProfileService trainerProfileService;
+
+    // 分页查询教练列表
+    // 这个应该是在membercontroller，得是member权限才能看到
+    @GetMapping("/listTrainers")
+    public RestResult<?> listTrainers(TrainerProfileQuery query) {
+        Page<TrainerProfileVO> resultPage = trainerProfileService.listTrainers(query);
+        return RestResult.success(resultPage, "Trainer list retrieved successfully.");
+    }
 
     // member 查看自己的简单信息
     @GetMapping("/user-profile")

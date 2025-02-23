@@ -4,6 +4,8 @@ import com.gym.entity.TrainerProfile;
 import com.gym.entity.User;
 import lombok.*;
 
+import java.util.Date;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -11,5 +13,8 @@ import lombok.*;
 @ToString
 public class TrainerAllProfile {
     private TrainerProfile trainerProfile;
-    private UserProfileResponse userProfileResponse;
+
+    private Date dateOfBirth;
+
+    private String address;
 }

@@ -29,7 +29,7 @@ public class RedisCacheServiceImpl implements RedisCacheService {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
-    // ✅ 直接注入 UserDao（或 UserMapper），而非 UserService
+    // 直接注入 UserDao（或 UserMapper），而非 UserService
     @Autowired
     private UserDao userDao;
 
@@ -104,6 +104,13 @@ public class RedisCacheServiceImpl implements RedisCacheService {
         int ttl = baseTtl + randomExtra;
         String key = "USER:" + user.getUserID();
         redisTemplate.opsForValue().set(key, UserCacheDTO.fromEntity(user), ttl, TimeUnit.SECONDS);
+    }
+
+    // 删除缓存
+    // 比如数据更新了
+    public void deleteUser(Long userId) {
+        String key = "USER:" + userId;
+        redisTemplate.delete(key);
     }
 
     // 基于 Redis 的简单分布式锁实现

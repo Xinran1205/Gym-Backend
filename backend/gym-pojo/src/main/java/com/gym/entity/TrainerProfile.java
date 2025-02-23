@@ -21,6 +21,10 @@ public class TrainerProfile implements Serializable {
     @TableField("user_id")
     private Long userId;
 
+    // 增加教练名字，这样就不用再去查 user 表了
+    @TableField("name")
+    private String name;
+
     @TableField("certifications")
     private String certifications;
 
@@ -32,6 +36,10 @@ public class TrainerProfile implements Serializable {
 
     @TableField("biography")
     private String biography;
+
+    // 需要再来个信息，上班的地点！
+    @TableField("workplace")
+    private String workplace;
 
     @TableField(value = "created_at", fill = FieldFill.INSERT)
     private LocalDateTime createTime;

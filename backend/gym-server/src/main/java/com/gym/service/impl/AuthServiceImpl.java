@@ -1,5 +1,6 @@
 package com.gym.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.gym.dto.ForgotPasswordRequest;
 import com.gym.dto.LoginRequest;
 import com.gym.dto.ResetPasswordRequest;
@@ -59,7 +60,18 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void forgotPassword(ForgotPasswordRequest request) {
-        User user = userService.getByEmail(request.getEmail());
+        // 只查出必要的字段
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.select(
+                        User::getUserID,
+                        User::getEmail,
+                        User::getAccountStatus
+                )
+                .eq(User::getEmail, request.getEmail());
+        User user = userService.getOne(queryWrapper);
+
+//
+//        User user = userService.getByEmail(request.getEmail());
         // 为安全考虑，如果用户不存在，则直接返回成功提示
         if (user == null) {
             return;
@@ -77,6 +89,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void resetPassword(ResetPasswordRequest request) {
+        // 这个地方就这么写吧，因为考虑到缓存！！！
         // 通过JWT验证 token，获得邮箱
         String email = jwtUtils.verifyResetToken(request.getToken());
         User user = userService.getByEmail(email);

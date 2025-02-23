@@ -19,7 +19,7 @@ public class TrainerProfileEventListener {
         User user = event.getUser();
         // 判断是否 Trainer
         if (user.getRole() == User.Role.Trainer) {
-            trainerProfileService.createDefaultTrainerProfile(user.getUserID());
+            trainerProfileService.createDefaultTrainerProfile(user.getUserID(), user.getName());
         }
     }
 }

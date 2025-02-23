@@ -62,10 +62,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String roleStr = (String) claims.get("role");
 
             try {
-                  Long userId = Long.valueOf(userIdStr);
+                Long userId = Long.valueOf(userIdStr);
+                // 去缓存中取用户信息
                 User user = redisCacheService.getUser(userId);
 
-                // User user = userService.getUserById(userId);
+                // 判断用户是否已经被注销 或者 用户权限是否变动
+                // 如果用户没问题！则为这次http请求设置认证信息，确保接下来的业务逻辑可以获取到用户信息
                 if (user != null && user.getRole().name().equals(roleStr)) {
                     // 构建Security认证对象
                     UsernamePasswordAuthenticationToken authenticationToken =

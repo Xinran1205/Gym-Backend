@@ -33,6 +33,12 @@ public class MyMetaObjecthandler implements MetaObjectHandler {
         if (metaObject.hasSetter("sentAt")) {
             metaObject.setValue("sentAt", LocalDateTime.now());
         }
+//        在你的 JWT 示例中，当 Token 验证成功后，你创建了一个 UsernamePasswordAuthenticationToken 对象，
+//        并把从 Redis 中查到的 User 对象作为 principal 传入。因此，此时调用
+//        SecurityContextHolder.getContext().getAuthentication().getPrincipal()
+//        返回的就是这个 User 对象，它包含了用户的详细信息（例如用户ID、角色等），供后续在业务逻辑中使用。
+
+        // TODO 后续需要改成具体的用户，id等
         if (metaObject.hasSetter("createUser")) {
             metaObject.setValue("createUser", SecurityContextHolder.
                     getContext().
@@ -43,11 +49,6 @@ public class MyMetaObjecthandler implements MetaObjectHandler {
                     getContext().
                     getAuthentication().getPrincipal());
         }
-        //这里很重要，我们这里获得不了session那么我们怎么获取当前用户id呢？
-        //
-//        metaObject.setValue("createUser", BaseContext.getCurrentId());
-//        metaObject.setValue("updateUser",BaseContext.getCurrentId());
-//        SecurityContextHolder.getContext()
     }
 
     /**

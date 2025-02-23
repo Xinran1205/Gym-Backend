@@ -2,7 +2,9 @@ package com.gym.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.gym.dto.TrainerProfileDTO;
+import com.gym.dto.TrainerProfileQuery;
 import com.gym.dto.UserEmail;
 import com.gym.entity.TrainerProfile;
 import com.gym.entity.User;
@@ -13,6 +15,7 @@ import com.gym.service.TrainerProfileService;
 import com.gym.service.UserService;
 import com.gym.util.SecurityUtils;
 import com.gym.vo.TrainerAllProfile;
+import com.gym.vo.TrainerProfileVO;
 import com.gym.vo.UserProfileResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,9 +37,6 @@ public class TrainerController {
 
     @Autowired
     private TrainerProfileService trainerProfileService;
-
-    @Autowired
-    private UserService userService;
 
     /**
      * Update the current trainer's profile using DTO.
@@ -83,4 +83,5 @@ public class TrainerController {
 
         return RestResult.success(trainerAllProfile, "Trainer profile retrieved successfully.");
     }
+
 }
