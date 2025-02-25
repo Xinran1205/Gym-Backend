@@ -21,7 +21,7 @@ import javax.validation.Valid;
 @Slf4j
 // 这个地方就是利用了Spring Security的注解，只有拥有Admin角色的用户才能访问这个接口
 // 也可以配置在securityConfig文件里面
-@PreAuthorize("hasRole('Admin')")
+@PreAuthorize("hasRole('admin')")
 public class AdminController {
 
     @Autowired

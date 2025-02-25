@@ -46,7 +46,7 @@ public class User implements Serializable {
     private LocalDateTime updateTime;
 
     public enum Role {
-        Member, Trainer, Admin
+        member, trainer, admin
     }
 
     public enum AccountStatus {

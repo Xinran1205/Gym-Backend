@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/member")
 @Slf4j
-@PreAuthorize("hasRole('Member')")
+@PreAuthorize("hasRole('member')")
 public class MemberController {
 
     @Autowired
@@ -57,6 +57,9 @@ public class MemberController {
                 .name(user.getName())
                 .dateOfBirth(user.getDateOfBirth())
                 .address(user.getAddress())
+                .email(user.getEmail())
+                .address(user.getAddress())
+                .role(user.getRole())
                 .build();
         return RestResult.success(response, "User profile retrieved successfully.");
     }

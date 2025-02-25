@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
     address VARCHAR(255) NOT NULL,
     email VARCHAR(150) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
-    role ENUM('Member', 'Trainer', 'Admin') NOT NULL,
+    role ENUM('member', 'trainer', 'admin') NOT NULL,
     account_status ENUM('Pending', 'Approved', 'Suspended') NOT NULL DEFAULT 'Pending',
     email_verified BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

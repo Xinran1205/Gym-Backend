@@ -40,6 +40,7 @@ public class SecurityConfig {
         // 在 JWT 场景下，我们通常不需要 CSRF（跨站请求伪造）保护，因为 JWT 通常用于无状态认证（stateless authentication），
         // 服务端不会存储用户状态。这行代码就是关闭 Spring Security 默认的 CSRF 防护。
 //        http.csrf().disable();
+        http.cors().and().csrf().disable();
 
         // 这个代码是关闭session，因为我们使用 JWT 代替了 session，所以不需要 session。
         http

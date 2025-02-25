@@ -82,7 +82,7 @@ public class AuthServiceImpl implements AuthService {
         // 生成重置密码的 JWT Token
         String resetToken = jwtUtils.generateResetToken(user);
         // 构造重置链接（前端路由地址自行配置）
-        String resetLink = "https://yourapp.com/reset-password?token=" + resetToken;
+        String resetLink = "http://localhost:5173/reset-password?token=" + resetToken;
         // 异步发送重置密码邮件
         mailService.sendResetLink(request.getEmail(), resetLink);
     }

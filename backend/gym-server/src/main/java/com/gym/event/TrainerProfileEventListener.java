@@ -18,7 +18,7 @@ public class TrainerProfileEventListener {
     public void handleUserCreatedEvent(UserCreatedEvent event) {
         User user = event.getUser();
         // 判断是否 Trainer
-        if (user.getRole() == User.Role.Trainer) {
+        if (user.getRole() == User.Role.trainer) {
             trainerProfileService.createDefaultTrainerProfile(user.getUserID(), user.getName());
         }
     }

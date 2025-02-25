@@ -28,7 +28,7 @@ class JwtUtilsTest {
         // 构造一个模拟的用户对象
         User user = new User();
         user.setUserID(100L);
-        user.setRole(User.Role.Member); // 假设 User 类中有 Role 枚举
+        user.setRole(User.Role.member); // 假设 User 类中有 Role 枚举
         user.setEmail("test@example.com");
 
         // 生成 Token
@@ -54,7 +54,7 @@ class JwtUtilsTest {
         // 构造一个模拟的用户对象
         User user = new User();
         user.setUserID(101L);
-        user.setRole(User.Role.Member);
+        user.setRole(User.Role.member);
         user.setEmail("test2@example.com");
 
         // 生成 Token

@@ -14,7 +14,6 @@ import com.gym.enumeration.ErrorCode;
 import com.gym.event.UserCreatedEvent;
 import com.gym.exception.CustomException;
 import com.gym.service.MailService;
-import com.gym.service.TrainerProfileService;
 import com.gym.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +22,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -51,7 +49,7 @@ public class UserServiceImpl extends ServiceImpl<UserDao, User> implements UserS
     @Override
     public void sendSignupVerification(SignupRequest signupRequest) {
         // 1. 校验角色，禁止注册管理员账号
-        if (signupRequest.getRole() == User.Role.Admin) {
+        if (signupRequest.getRole() == User.Role.admin) {
             throw new CustomException(ErrorCode.BAD_REQUEST, "You do not have permission to register as an admin.");
         }
         // 2. 检查邮箱是否已注册

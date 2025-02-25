@@ -32,7 +32,7 @@ import java.util.Date;
 @RestController
 @RequestMapping("/trainer")
 @Slf4j
-@PreAuthorize("hasRole('Trainer')")
+@PreAuthorize("hasRole('trainer')")
 public class TrainerController {
 
     @Autowired

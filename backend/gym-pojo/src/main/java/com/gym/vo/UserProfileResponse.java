@@ -16,5 +16,9 @@ public class UserProfileResponse {
 
     private Date dateOfBirth;
 
+    private String email;
+
     private String address;
+
+    private User.Role role;
 }
