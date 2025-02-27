@@ -1,6 +1,7 @@
 package com.gym.vo;
 
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.gym.entity.TrainerConnectRequest;
 import lombok.*;
 
 
@@ -24,5 +25,7 @@ public class TrainerProfileVO {
     private String biography;
 
     private String workplace;
+
+    private TrainerConnectRequest.RequestStatus connectStatus;
 
 }

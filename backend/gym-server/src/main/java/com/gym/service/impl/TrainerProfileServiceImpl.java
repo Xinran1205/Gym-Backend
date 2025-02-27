@@ -6,12 +6,15 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.gym.dao.TrainerProfileDao;
 import com.gym.dao.UserDao;
 import com.gym.dto.TrainerProfileQuery;
+import com.gym.entity.TrainerConnectRequest;
 import com.gym.entity.TrainerProfile;
 import com.gym.entity.User;
 import com.gym.enumeration.ErrorCode;
 import com.gym.exception.CustomException;
+import com.gym.service.TrainerConnectRequestService;
 import com.gym.service.TrainerProfileService;
 import com.gym.service.UserService;
+import com.gym.util.SecurityUtils;
 import com.gym.vo.TrainerAllProfile;
 import com.gym.vo.TrainerProfileVO;
 import com.gym.vo.UserProfileResponse;
@@ -22,6 +25,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +36,9 @@ public class TrainerProfileServiceImpl extends ServiceImpl<TrainerProfileDao, Tr
 
     @Autowired
     UserService userService;
+
+    @Autowired
+    private TrainerConnectRequestService trainerConnectRequestService;
 
     /**
      * 为指定的教练用户创建一条默认的 TrainerProfile 记录。
@@ -106,15 +114,45 @@ public class TrainerProfileServiceImpl extends ServiceImpl<TrainerProfileDao, Tr
         // 3. 使用 MyBatis-Plus 执行分页查询
         Page<TrainerProfile> profilePage = this.page(page, wrapper);
 
-        // 4. 转换查询结果为 VO
+        // 4. 获取当前 member 的ID（当前登录用户）
+        Long currentMemberId = SecurityUtils.getCurrentUserId();
+        if (currentMemberId == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
+        }
+
+        // 5. 从查询结果中提取所有教练的 userId 列表
+        List<Long> trainerIds = profilePage.getRecords().stream()
+                .map(TrainerProfile::getUserId)
+                .collect(Collectors.toList());
+
+        // 6. 查询当前 member 对这些教练的连接申请记录（单次查询，避免 N+1 问题）
+        LambdaQueryWrapper<TrainerConnectRequest> connectWrapper = new LambdaQueryWrapper<>();
+        connectWrapper.eq(TrainerConnectRequest::getMemberId, currentMemberId)
+                .in(TrainerConnectRequest::getTrainerId, trainerIds);
+        List<TrainerConnectRequest> connectRequests = trainerConnectRequestService.list(connectWrapper);
+
+        // 将查询到的连接记录转换为 Map，key 为 trainerId
+        Map<Long, TrainerConnectRequest> connectMap = connectRequests.stream()
+                .collect(Collectors.toMap(TrainerConnectRequest::getTrainerId, Function.identity()));
+
+        // 7. 转换 TrainerProfile 到 TrainerProfileVO，同时设置连接状态
         Page<TrainerProfileVO> voPage = new Page<>(profilePage.getCurrent(),
                 profilePage.getSize(),
                 profilePage.getTotal());
         List<TrainerProfileVO> voList = profilePage.getRecords().stream()
                 .map(trainerProfile -> {
                     TrainerProfileVO vo = new TrainerProfileVO();
-                    // copy需要的属性
+                    // 拷贝基本属性
                     BeanUtils.copyProperties(trainerProfile, vo);
+                    vo.setUserId(trainerProfile.getUserId());
+                    // 根据当前 member 与该教练是否有连接申请，设置连接状态
+                    TrainerConnectRequest connectRequest = connectMap.get(trainerProfile.getUserId());
+                    if (connectRequest != null) {
+                        vo.setConnectStatus(connectRequest.getStatus());
+                    } else {
+                        // 如果没有连接记录，设置为 null
+                        vo.setConnectStatus(null);
+                    }
                     return vo;
                 })
                 .collect(Collectors.toList());
