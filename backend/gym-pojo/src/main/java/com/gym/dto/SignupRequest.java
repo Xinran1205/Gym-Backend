@@ -4,6 +4,7 @@ import com.gym.entity.User;
 import lombok.*;
 
 import javax.validation.constraints.*;
+import java.time.LocalDate;
 import java.util.Date;
 
 @Data
@@ -29,7 +30,7 @@ public class SignupRequest {
 
     @NotNull(message = "Date of birth cannot be null")
     @Past(message = "Date of birth must be in the past")
-    private Date dateOfBirth;
+    private LocalDate dateOfBirth;
 
     @NotNull(message = "Role cannot be null")
     private User.Role role;

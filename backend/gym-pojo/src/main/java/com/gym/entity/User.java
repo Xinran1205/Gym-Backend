@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.*;
 import lombok.*;
 
 import java.io.Serializable;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
 
@@ -22,7 +23,7 @@ public class User implements Serializable {
     private String name;
 
     @TableField("date_of_birth")
-    private Date dateOfBirth;
+    private LocalDate dateOfBirth;
 
     @TableField("address")
     private String address;

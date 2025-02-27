@@ -3,6 +3,7 @@ package com.gym.vo;
 import com.gym.entity.User;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.util.Date;
 
 @Data
@@ -14,7 +15,7 @@ public class UserProfileResponse {
 
     private String name;
 
-    private Date dateOfBirth;
+    private LocalDate dateOfBirth;
 
     private String email;
 

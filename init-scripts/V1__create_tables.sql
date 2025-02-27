@@ -25,6 +25,12 @@ CREATE TABLE IF NOT EXISTS trainer_profiles (
     rating DECIMAL(3,2),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    workplace varchar(255) DEFAULT NULL,
+    name varchar(100) NOT NULL,
+    PRIMARY KEY (`trainer_profile_id`),
+    UNIQUE KEY `user_id` (`user_id`),
+     KEY `idx_specializations` (`specializations`),
+    KEY `idx_workplace` (`workplace`),
     CONSTRAINT fk_trainer_user FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 

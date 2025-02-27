@@ -4,6 +4,7 @@ import com.gym.entity.TrainerProfile;
 import com.gym.entity.User;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.util.Date;
 
 @Data
@@ -14,7 +15,7 @@ import java.util.Date;
 public class TrainerAllProfile {
     private TrainerProfile trainerProfile;
 
-    private Date dateOfBirth;
+    private LocalDate dateOfBirth;
 
     private String address;
 }

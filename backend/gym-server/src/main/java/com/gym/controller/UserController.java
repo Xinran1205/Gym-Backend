@@ -117,7 +117,7 @@ public class UserController {
     /**
      * 更新用户个人资料
      */
-    @PutMapping("/user-profile")
+    @PostMapping("/user-profile")
     public RestResult<?> updateUserProfile(@Valid @RequestBody UserProfileDTO request) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
         if (currentUserId == null) {

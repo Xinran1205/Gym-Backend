@@ -7,6 +7,7 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Past;
 import javax.validation.constraints.Size;
+import java.time.LocalDate;
 import java.util.Date;
 
 @Data
@@ -22,7 +23,7 @@ public class UserProfileDTO {
 
     @NotNull(message = "Date of birth cannot be null")
     @Past(message = "Date of birth must be in the past")
-    private Date dateOfBirth;
+    private LocalDate dateOfBirth;
 
     @NotBlank(message = "Address cannot be blank")
     private String address;
