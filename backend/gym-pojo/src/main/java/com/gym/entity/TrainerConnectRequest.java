@@ -39,7 +39,7 @@ public class TrainerConnectRequest implements Serializable {
     private LocalDateTime updatedAt;
 
     public enum RequestStatus {
-        Pending, Accepted, Rejected
+        Pending, Accepted, Rejected, NONE
     }
 }
 
