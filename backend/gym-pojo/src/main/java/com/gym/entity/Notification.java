@@ -18,20 +18,28 @@ public class Notification implements Serializable {
     private Long notificationId;
 
     @TableField("user_id")
-    private Long userId;
+    private Long userId; // 接收通知的用户ID
+
+    @TableField("title")
+    private String title; // 通知标题，例如 "申请结果通知"
 
     @TableField("message")
-    private String message;
+    private String message; // 通知内容，例如 "您的教练申请已被接受"
 
-    /**
-     * type 为 VARCHAR(50)，这里直接用 String
-     */
     @TableField("type")
-    private String type;
+    private NotificationType type; // 通知类型
 
     @TableField("is_read")
-    private Boolean isRead = false;
+    private Boolean isRead; // 是否已读
 
     @TableField(value = "created_at", fill = FieldFill.INSERT)
-    private LocalDateTime createTime;
+    private LocalDateTime createdAt;
+
+    @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updatedAt;
+
+    public enum NotificationType {
+        INFO, ALERT, SYSTEM
+    }
 }
+

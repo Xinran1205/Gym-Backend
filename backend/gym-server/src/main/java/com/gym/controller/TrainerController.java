@@ -3,6 +3,7 @@ package com.gym.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.gym.dto.TrainerConnectDecisionDTO;
 import com.gym.dto.TrainerProfileDTO;
 import com.gym.dto.TrainerProfileQuery;
 import com.gym.dto.UserEmail;
@@ -11,6 +12,7 @@ import com.gym.entity.User;
 import com.gym.enumeration.ErrorCode;
 import com.gym.exception.CustomException;
 import com.gym.result.RestResult;
+import com.gym.service.TrainerConnectRequestService;
 import com.gym.service.TrainerProfileService;
 import com.gym.service.UserService;
 import com.gym.util.SecurityUtils;
@@ -37,6 +39,9 @@ public class TrainerController {
 
     @Autowired
     private TrainerProfileService trainerProfileService;
+
+    @Autowired
+    private TrainerConnectRequestService trainerConnectRequestService;
 
     /**
      * Update the current trainer's profile using DTO.
@@ -82,6 +87,42 @@ public class TrainerController {
         TrainerAllProfile trainerAllProfile = trainerProfileService.getTrainerAllProfile(currentUserId);
 
         return RestResult.success(trainerAllProfile, "Trainer profile retrieved successfully.");
+    }
+
+    /**
+     * 接受 member 的 connect 申请
+     * 仅负责校验当前教练身份和调用业务层方法，具体逻辑在 Service 层处理
+     *
+     * @param decisionDTO 包含申请ID和可选反馈信息
+     * @return 操作结果
+     */
+    @PutMapping("/connect-request/accept")
+    public RestResult<?> acceptConnectRequest(@Valid @RequestBody TrainerConnectDecisionDTO decisionDTO) {
+        Long currentTrainerId = SecurityUtils.getCurrentUserId();
+        if (currentTrainerId == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
+        }
+        trainerConnectRequestService.acceptConnectRequest(decisionDTO, currentTrainerId);
+        log.info("Trainer [{}] accepted connect request [{}]", currentTrainerId, decisionDTO.getRequestId());
+        return RestResult.success(null, "Connect request accepted successfully.");
+    }
+
+    /**
+     * 拒绝 member 的 connect 申请
+     * 仅负责校验当前教练身份和调用业务层方法，具体逻辑在 Service 层处理
+     *
+     * @param decisionDTO 包含申请ID和可选反馈信息
+     * @return 操作结果
+     */
+    @PutMapping("/connect-request/reject")
+    public RestResult<?> rejectConnectRequest(@Valid @RequestBody TrainerConnectDecisionDTO decisionDTO) {
+        Long currentTrainerId = SecurityUtils.getCurrentUserId();
+        if (currentTrainerId == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
+        }
+        trainerConnectRequestService.rejectConnectRequest(decisionDTO, currentTrainerId);
+        log.info("Trainer [{}] rejected connect request [{}]", currentTrainerId, decisionDTO.getRequestId());
+        return RestResult.success(null, "Connect request rejected successfully.");
     }
 
 }

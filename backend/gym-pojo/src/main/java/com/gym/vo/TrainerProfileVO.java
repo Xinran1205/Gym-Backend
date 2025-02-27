@@ -10,6 +10,8 @@ import lombok.*;
 @Builder
 @ToString
 public class TrainerProfileVO {
+    // 这里可能要带上trainer的userid
+    private Long userId;
 
     private String name;
 
