@@ -30,5 +30,13 @@ public interface NotificationService extends IService<Notification> {
      * @param userId         当前用户ID
      */
     void markAsRead(Long notificationId, Long userId);
+
+    /**
+     * 删除指定通知，前提是该通知已被标记为已读
+     *
+     * @param notificationId 通知ID
+     * @param userId         当前用户ID
+     */
+    void deleteNotification(Long notificationId, Long userId);
 }
 

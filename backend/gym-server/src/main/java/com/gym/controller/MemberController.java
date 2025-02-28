@@ -115,4 +115,14 @@ public class MemberController {
         return RestResult.success(null, "Notification marked as read successfully.");
     }
 
+    // 新增删除通知接口：仅允许删除已读通知
+    @DeleteMapping("/notifications/{notificationId}")
+    public RestResult<?> deleteNotification(@PathVariable("notificationId") Long notificationId) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
+        }
+        notificationService.deleteNotification(notificationId, currentUserId);
+        return RestResult.success(null, "Notification deleted successfully.");
+    }
 }

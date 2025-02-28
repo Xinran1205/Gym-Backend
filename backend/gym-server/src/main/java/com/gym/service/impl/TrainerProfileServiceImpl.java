@@ -103,7 +103,6 @@ public class TrainerProfileServiceImpl extends ServiceImpl<TrainerProfileDao, Tr
         }
 
         // 原理是利用sql语句的limit和offset
-
         // 1. 构造分页对象（默认第1页，每页10条，可根据需求做校验/限制）
         Page<TrainerProfile> page = new Page<>(query.getPage(), query.getPageSize());
         // 使用自定义 SQL 进行 LEFT JOIN 查询

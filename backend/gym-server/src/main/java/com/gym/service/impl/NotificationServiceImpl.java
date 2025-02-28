@@ -48,5 +48,24 @@ public class NotificationServiceImpl extends ServiceImpl<NotificationDao, Notifi
             throw new CustomException(ErrorCode.BAD_REQUEST, "Failed to mark notification as read.");
         }
     }
+
+    @Override
+    public void deleteNotification(Long notificationId, Long userId) {
+        Notification notification = this.getById(notificationId);
+        if (notification == null) {
+            throw new CustomException(ErrorCode.NOT_FOUND, "Notification not found.");
+        }
+        if (!notification.getUserId().equals(userId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN, "You are not authorized to delete this notification.");
+        }
+        if (notification.getIsRead() == null || !notification.getIsRead()) {
+            throw new CustomException(ErrorCode.BAD_REQUEST, "Notification must be marked as read before deletion.");
+        }
+        boolean removed = this.removeById(notificationId);
+        if (!removed) {
+            throw new CustomException(ErrorCode.BAD_REQUEST, "Failed to delete notification.");
+        }
+        log.info("Notification [{}] deleted for user [{}]", notificationId, userId);
+    }
 }
 

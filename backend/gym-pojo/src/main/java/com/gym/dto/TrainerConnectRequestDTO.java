@@ -10,7 +10,7 @@ import javax.validation.constraints.NotBlank;
 @Builder
 @ToString
 public class TrainerConnectRequestDTO {
-    @NotBlank(message = "Trainer ID cannot be blank")
+//    @NotBlank(message = "Trainer ID cannot be blank")
     private Long trainerId;
 
     private String requestMessage;

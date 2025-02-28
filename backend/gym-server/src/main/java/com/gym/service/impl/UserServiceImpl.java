@@ -92,6 +92,7 @@ public class UserServiceImpl extends ServiceImpl<UserDao, User> implements UserS
         // 清理 Redis 中的 PendingVerification 信息
         redisTemplate.delete(redisKey);
         // 更新缓存和布隆过滤器
+        // 感觉不需要更新缓存，直接更新布隆过滤器
         redisCacheService.updateUser(newUser);
         bloomFilterUtil.addUserToBloomFilter(newUser.getUserID());
     }
