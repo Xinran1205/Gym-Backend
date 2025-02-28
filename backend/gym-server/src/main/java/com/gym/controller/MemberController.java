@@ -1,17 +1,14 @@
 package com.gym.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.gym.dto.TrainerConnectRequestDTO;
-import com.gym.dto.TrainerProfileQuery;
+import com.gym.dto.*;
 import com.gym.entity.Notification;
+import com.gym.entity.TrainerAvailability;
 import com.gym.entity.User;
 import com.gym.enumeration.ErrorCode;
 import com.gym.exception.CustomException;
 import com.gym.result.RestResult;
-import com.gym.service.NotificationService;
-import com.gym.service.TrainerConnectRequestService;
-import com.gym.service.TrainerProfileService;
-import com.gym.service.UserService;
+import com.gym.service.*;
 import com.gym.util.SecurityUtils;
 import com.gym.vo.TrainerProfileVO;
 import com.gym.vo.UserProfileResponse;
@@ -21,6 +18,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.List;
 
 
 @RestController
@@ -39,7 +37,10 @@ public class MemberController {
     private TrainerConnectRequestService trainerConnectRequestService;
 
     @Autowired
-    private NotificationService notificationService;
+    private TrainerAvailabilityService trainerAvailabilityService;
+
+    @Autowired
+    private AppointmentBookingService appointmentBookingService;
 
     // 分页查询教练列表
     // 这个应该是在membercontroller，得是member权限才能看到
@@ -91,38 +92,39 @@ public class MemberController {
         return RestResult.success(null, "Connect request submitted successfully.");
     }
 
-    // 新增接口：分页查询当前 member 的通知列表（业务逻辑在 service 层）
-    @GetMapping("/notifications")
-    public RestResult<?> getNotifications(@RequestParam(defaultValue = "1") Integer page,
-                                          @RequestParam(defaultValue = "10") Integer pageSize) {
+    /**
+     * 用户查询指定教练的未来可用时间段接口
+     * 前端需要传入教练的ID，该接口仅返回状态为 Available 且开始时间在当前时间之后的时间段
+     */
+
+    @GetMapping("/trainer/{trainerId}/availability")
+    public RestResult<?> getTrainerAvailability(@PathVariable("trainerId") Long trainerId) {
+        // 校验当前用户（学员）是否登录
         Long currentUserId = SecurityUtils.getCurrentUserId();
         if (currentUserId == null) {
             throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
         }
-        // 这里我就全部返回了！
-        Page<Notification> notificationsPage = notificationService.getNotificationsByUser(currentUserId, page, pageSize);
-        return RestResult.success(notificationsPage, "Notifications retrieved successfully.");
+
+        // 调用 service 层查询指定教练从当前时间开始、状态为 Available 的可用时间段
+        List<AvailabilitySlotDTO> slotList = trainerAvailabilityService.getAvailableSlots(trainerId);
+
+        // 封装为 TrainerAvailabilityDTO
+        TrainerAvailabilityDTO responseDTO = TrainerAvailabilityDTO.builder()
+                .availabilitySlots(slotList)
+                .build();
+
+        return RestResult.success(responseDTO, "Trainer availability retrieved successfully.");
     }
 
-    // 新增接口：标记指定通知为已读（业务逻辑在 service 层）
-    @PutMapping("/notifications/{notificationId}/read")
-    public RestResult<?> markNotificationAsRead(@PathVariable("notificationId") Long notificationId) {
+    // 用户选择教练的可用时间段并提交预约请求
+    @PostMapping("/appointment")
+    public RestResult<?> bookAppointment(@RequestBody @Valid AppointmentBookingDTO dto) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
         if (currentUserId == null) {
             throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
         }
-        notificationService.markAsRead(notificationId, currentUserId);
-        return RestResult.success(null, "Notification marked as read successfully.");
+        appointmentBookingService.bookSession(dto, currentUserId);
+        return RestResult.success(null, "Appointment booking submitted successfully.");
     }
 
-    // 新增删除通知接口：仅允许删除已读通知
-    @DeleteMapping("/notifications/{notificationId}")
-    public RestResult<?> deleteNotification(@PathVariable("notificationId") Long notificationId) {
-        Long currentUserId = SecurityUtils.getCurrentUserId();
-        if (currentUserId == null) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
-        }
-        notificationService.deleteNotification(notificationId, currentUserId);
-        return RestResult.success(null, "Notification deleted successfully.");
-    }
 }

@@ -3,15 +3,14 @@ package com.gym.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.gym.dto.TrainerConnectDecisionDTO;
-import com.gym.dto.TrainerProfileDTO;
-import com.gym.dto.TrainerProfileQuery;
-import com.gym.dto.UserEmail;
+import com.gym.dto.*;
+import com.gym.entity.TrainerAvailability;
 import com.gym.entity.TrainerProfile;
 import com.gym.entity.User;
 import com.gym.enumeration.ErrorCode;
 import com.gym.exception.CustomException;
 import com.gym.result.RestResult;
+import com.gym.service.TrainerAvailabilityService;
 import com.gym.service.TrainerConnectRequestService;
 import com.gym.service.TrainerProfileService;
 import com.gym.service.UserService;
@@ -30,6 +29,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.Date;
+import java.util.List;
 
 @RestController
 @RequestMapping("/trainer")
@@ -42,6 +42,9 @@ public class TrainerController {
 
     @Autowired
     private TrainerConnectRequestService trainerConnectRequestService;
+
+    @Autowired
+    private TrainerAvailabilityService trainerAvailabilityService;
 
     /**
      * Update the current trainer's profile using DTO.
@@ -125,4 +128,33 @@ public class TrainerController {
         return RestResult.success(null, "Connect request rejected successfully.");
     }
 
+    /**
+     * 设置或更新教练的可用时间
+     * 前端可以一次性传递多个可用时间段，例如在日历上勾选多个小时段后统一提交
+     */
+    @PostMapping("/availability")
+    public RestResult<?> updateAvailability(@Valid @RequestBody TrainerAvailabilityDTO availabilityDTO) {
+        Long currentTrainerId = SecurityUtils.getCurrentUserId();
+        if (currentTrainerId == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
+        }
+        // 这里假设用户ID转换为 Integer 类型（根据 TrainerAvailability 实体中的 trainerId 类型）
+        trainerAvailabilityService.updateAvailability(currentTrainerId, availabilityDTO.getAvailabilitySlots());
+        return RestResult.success(null, "Availability updated successfully.");
+    }
+
+
+    /**
+     * 查出教练的所有时间段，包括booked和unavailable（暂时没有unavailable）
+     * 前端无需传递额外参数，直接通过 SecurityUtils 获取当前教练ID
+     */
+    @GetMapping("/availability")
+    public RestResult<?> getAvailability() {
+        Long currentTrainerId = SecurityUtils.getCurrentUserId();
+        if (currentTrainerId == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
+        }
+        List<TrainerAvailability> availabilities = trainerAvailabilityService.getFutureAvailability(currentTrainerId);
+        return RestResult.success(availabilities, "Availability retrieved successfully.");
+    }
 }

@@ -32,6 +32,7 @@ public class TrainerConnectRequestServiceImpl extends ServiceImpl<TrainerConnect
         return this.count(queryWrapper);
     }
 
+    // member提交连接申请
     @Override
     public void submitConnectRequest(TrainerConnectRequestDTO dto, Long memberId) {
         TrainerConnectRequest request = TrainerConnectRequest.builder()
@@ -41,6 +42,16 @@ public class TrainerConnectRequestServiceImpl extends ServiceImpl<TrainerConnect
                 .requestMessage(dto.getRequestMessage())
                 .build();
         this.save(request);
+        // 生成并发送通知给教练
+        Notification notification = Notification.builder()
+                .userId(dto.getTrainerId())
+                .title("New connection request")
+                // 你有一个新的连接申请
+                .message("You have a new connection request.")
+                .type(Notification.NotificationType.INFO)
+                .isRead(false)
+                .build();
+        notificationService.sendNotification(notification);
     }
 
 

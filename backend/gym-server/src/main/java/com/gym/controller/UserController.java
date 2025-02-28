@@ -1,13 +1,14 @@
 package com.gym.controller;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.gym.AOP.RateLimit;
 import com.gym.bloomFilter.BloomFilterUtil;
 import com.gym.dto.*;
 import com.gym.dto.redis.PendingPasswordReset;
+import com.gym.entity.Notification;
 import com.gym.entity.TrainerProfile;
-import com.gym.service.AuthService;
-import com.gym.service.TrainerProfileService;
+import com.gym.service.*;
 import com.gym.service.impl.RedisCacheServiceImpl;
 import com.gym.util.IpUtil;
 import com.gym.util.SecurityUtils;
@@ -17,8 +18,6 @@ import com.gym.entity.User;
 import com.gym.enumeration.ErrorCode;
 import com.gym.exception.CustomException;
 import com.gym.result.RestResult;
-import com.gym.service.MailService;
-import com.gym.service.UserService;
 import com.gym.util.JwtUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +42,9 @@ public class UserController {
 
     @Autowired
     private TencentCaptchaUtil tencentCaptchaUtil;
+
+    @Autowired
+    private NotificationService notificationService;
 
     // 用于生成腾讯机器人验证码
     private void validateCaptcha(String captchaTicket, String captchaRandstr, HttpServletRequest request) {
@@ -125,5 +127,43 @@ public class UserController {
         }
         userService.updateUserProfile(currentUserId, request);
         return RestResult.success("Updated", "User profile updated successfully.");
+    }
+
+
+
+
+    // 新增接口：分页查询当前user（可能是member可能是教练）的通知列表（业务逻辑在 service 层）
+    @GetMapping("/notifications")
+    public RestResult<?> getNotifications(@RequestParam(defaultValue = "1") Integer page,
+                                          @RequestParam(defaultValue = "10") Integer pageSize) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
+        }
+        // 这里我就全部返回了！
+        Page<Notification> notificationsPage = notificationService.getNotificationsByUser(currentUserId, page, pageSize);
+        return RestResult.success(notificationsPage, "Notifications retrieved successfully.");
+    }
+
+    // 新增接口：标记指定通知为已读（业务逻辑在 service 层）
+    @PutMapping("/notifications/{notificationId}/read")
+    public RestResult<?> markNotificationAsRead(@PathVariable("notificationId") Long notificationId) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
+        }
+        notificationService.markAsRead(notificationId, currentUserId);
+        return RestResult.success(null, "Notification marked as read successfully.");
+    }
+
+    // 新增删除通知接口：仅允许删除已读通知
+    @DeleteMapping("/notifications/{notificationId}")
+    public RestResult<?> deleteNotification(@PathVariable("notificationId") Long notificationId) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
+        }
+        notificationService.deleteNotification(notificationId, currentUserId);
+        return RestResult.success(null, "Notification deleted successfully.");
     }
 }
