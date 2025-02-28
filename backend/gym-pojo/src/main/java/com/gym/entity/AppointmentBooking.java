@@ -42,7 +42,7 @@ public class AppointmentBooking implements Serializable {
     private LocalDateTime updatedAt;
 
     public enum AppointmentStatus {
-        Pending, Approved, Rejected, Cancelled, Completed
+        Pending, Approved, Rejected, Cancelled, Completed, Expired
     }
 }
 

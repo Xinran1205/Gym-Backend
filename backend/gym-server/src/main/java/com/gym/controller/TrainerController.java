@@ -4,16 +4,14 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.gym.dto.*;
+import com.gym.entity.AppointmentBooking;
 import com.gym.entity.TrainerAvailability;
 import com.gym.entity.TrainerProfile;
 import com.gym.entity.User;
 import com.gym.enumeration.ErrorCode;
 import com.gym.exception.CustomException;
 import com.gym.result.RestResult;
-import com.gym.service.TrainerAvailabilityService;
-import com.gym.service.TrainerConnectRequestService;
-import com.gym.service.TrainerProfileService;
-import com.gym.service.UserService;
+import com.gym.service.*;
 import com.gym.util.SecurityUtils;
 import com.gym.vo.TrainerAllProfile;
 import com.gym.vo.TrainerProfileVO;
@@ -45,6 +43,9 @@ public class TrainerController {
 
     @Autowired
     private TrainerAvailabilityService trainerAvailabilityService;
+
+    @Autowired
+    private AppointmentBookingService appointmentBookingService;
 
     /**
      * Update the current trainer's profile using DTO.
@@ -145,6 +146,21 @@ public class TrainerController {
 
 
     /**
+     * 教练查询待审核预约请求接口（仅返回状态为 Pending 且未过期的预约）
+     */
+    @GetMapping("/appointments/pending")
+    public RestResult<?> getPendingAppointments() {
+        Long currentTrainerId = SecurityUtils.getCurrentUserId();
+        if (currentTrainerId == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
+        }
+        List<AppointmentBooking> pendingAppointments = appointmentBookingService.getPendingAppointmentsForTrainer(currentTrainerId);
+        return RestResult.success(pendingAppointments, "Pending appointments retrieved successfully.");
+    }
+
+
+    /**
+     * 这个是教练修改和初始化自己的可用时间接口
      * 查出教练的所有时间段，包括booked和unavailable（暂时没有unavailable）
      * 前端无需传递额外参数，直接通过 SecurityUtils 获取当前教练ID
      */
@@ -156,5 +172,36 @@ public class TrainerController {
         }
         List<TrainerAvailability> availabilities = trainerAvailabilityService.getFutureAvailability(currentTrainerId);
         return RestResult.success(availabilities, "Availability retrieved successfully.");
+    }
+
+
+    /**
+     * 教练同意学员预约申请接口
+     * 前端传入 AppointmentDecisionDTO，其中包含预约ID和可选反馈信息
+     */
+    @PutMapping("/appointment/accept")
+    public RestResult<?> acceptAppointment(@Valid @RequestBody AppointmentDecisionDTO decisionDTO) {
+        Long currentTrainerId = SecurityUtils.getCurrentUserId();
+        if (currentTrainerId == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
+        }
+        appointmentBookingService.acceptAppointment(decisionDTO, currentTrainerId);
+        log.info("Trainer [{}] accepted appointment [{}]", currentTrainerId, decisionDTO.getAppointmentId());
+        return RestResult.success(null, "Appointment accepted successfully.");
+    }
+
+    /**
+     * 教练拒绝学员预约申请接口
+     * 前端传入 AppointmentDecisionDTO，其中包含预约ID和可选反馈信息
+     */
+    @PutMapping("/appointment/reject")
+    public RestResult<?> rejectAppointment(@Valid @RequestBody AppointmentDecisionDTO decisionDTO) {
+        Long currentTrainerId = SecurityUtils.getCurrentUserId();
+        if (currentTrainerId == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
+        }
+        appointmentBookingService.rejectAppointment(decisionDTO, currentTrainerId);
+        log.info("Trainer [{}] rejected appointment [{}]", currentTrainerId, decisionDTO.getAppointmentId());
+        return RestResult.success(null, "Appointment rejected successfully.");
     }
 }

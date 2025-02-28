@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @Builder
 @ToString
 public class AvailabilitySlotDTO {
+    private Long availabilityId;
     // @NotNull(message = "Start time cannot be null")
     private LocalDateTime startTime;
 

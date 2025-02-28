@@ -117,6 +117,7 @@ public class TrainerAvailabilityServiceImpl extends ServiceImpl<TrainerAvailabil
 
         return availabilityList.stream()
                 .map(item -> AvailabilitySlotDTO.builder()
+                        .availabilityId(item.getAvailabilityId())
                         .startTime(item.getStartTime())
                         .endTime(item.getEndTime())
                         .build())
