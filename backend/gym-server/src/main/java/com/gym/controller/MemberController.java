@@ -2,22 +2,24 @@ package com.gym.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.gym.dto.*;
-import com.gym.entity.Notification;
-import com.gym.entity.TrainerAvailability;
 import com.gym.entity.User;
 import com.gym.enumeration.ErrorCode;
 import com.gym.exception.CustomException;
 import com.gym.result.RestResult;
 import com.gym.service.*;
 import com.gym.util.SecurityUtils;
+import com.gym.vo.AppointmentBookingDetailVO;
+import com.gym.vo.DynamicAppointmentStatisticsVO;
 import com.gym.vo.TrainerProfileVO;
 import com.gym.vo.UserProfileResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.time.LocalDate;
 import java.util.List;
 
 
@@ -116,7 +118,7 @@ public class MemberController {
         return RestResult.success(responseDTO, "Trainer availability retrieved successfully.");
     }
 
-    // 用户选择教练的可用时间段并提交预约请求
+    // 会员选择教练的可用时间段并提交预约请求
     @PostMapping("/appointment")
     public RestResult<?> bookAppointment(@RequestBody @Valid AppointmentBookingDTO dto) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
@@ -125,6 +127,79 @@ public class MemberController {
         }
         appointmentBookingService.bookSession(dto, currentUserId);
         return RestResult.success(null, "Appointment booking submitted successfully.");
+    }
+
+
+    /**
+     * 分页查询当前会员所有未来预约的详细信息：
+     * 先自动更新过期（或完成）的记录，然后只返回状态为 Pending 和 Approved 的记录。
+     */
+
+//    这个设计的核心思路是：在会员查询预约记录之前，先统一批量更新所有待处理记录的状态
+//    （例如将已到时间但状态仍为 Pending 的记录更新为 Expired，或将 Approved 但课程结束的更新为 Completed），然后再进行分页查询。
+    @GetMapping("/appointments/upcoming")
+    public RestResult<?> getUpcomingAppointments(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
+        }
+        Page<AppointmentBookingDetailVO> appointmentPage = new Page<>(page, pageSize);
+        appointmentPage = appointmentBookingService.getUpcomingAppointmentsForMember(currentUserId, appointmentPage);
+        return RestResult.success(appointmentPage, "Upcoming appointments retrieved successfully.");
+    }
+
+    /**
+     * 分页查询当前会员的历史预约记录：
+     * 返回状态不为 Pending 和 Approved 的记录（例如 Expired, Rejected, Cancelled, Completed）。
+     */
+    @GetMapping("/appointments/history")
+    public RestResult<?> getHistoricalAppointments(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
+        }
+        Page<AppointmentBookingDetailVO> appointmentPage = new Page<>(page, pageSize);
+        appointmentPage = appointmentBookingService.getHistoricalAppointmentsForMember(currentUserId, appointmentPage);
+        return RestResult.success(appointmentPage, "Historical appointments retrieved successfully.");
+    }
+
+    /**
+     * 会员取消预约接口
+     * 会员可以取消自己状态为 Pending 的预约；如果预约已被批准（Approved），则提示用户不能直接取消
+     * 预约ID 通过 URL 路径传入
+     */
+    @PutMapping("/appointment/cancel/{appointmentId}")
+    public RestResult<?> cancelAppointment(@PathVariable("appointmentId") Long appointmentId) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
+        }
+        appointmentBookingService.cancelAppointment(appointmentId, currentUserId);
+        return RestResult.success(null, "Appointment cancelled successfully.");
+    }
+
+    /**
+     * 动态统计接口：查询当前会员在指定日期范围内的预约统计数据，
+     * 返回每天完成的课程小时数（单位：小时）。
+     * 前端可用于展示图表，日期范围最大不超过30天。
+     *
+     * @param startDate 统计开始日期（格式 yyyy-MM-dd）
+     * @param endDate   统计结束日期（格式 yyyy-MM-dd）
+     */
+    @GetMapping("/appointments/statistics/dynamic")
+    public RestResult<?> getDynamicAppointmentStatistics(
+            @RequestParam("startDate") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+            @RequestParam("endDate") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
+        }
+        DynamicAppointmentStatisticsVO statistics = appointmentBookingService.getDynamicAppointmentStatisticsForMember(currentUserId, startDate, endDate);
+        return RestResult.success(statistics, "Appointment statistics retrieved successfully.");
     }
 
 }

@@ -1,6 +1,7 @@
 package com.gym.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.gym.dao.AppointmentBookingDao;
 import com.gym.dto.AppointmentBookingDTO;
@@ -15,12 +16,17 @@ import com.gym.service.AppointmentBookingService;
 import com.gym.service.NotificationService;
 import com.gym.service.TrainerAvailabilityService;
 import com.gym.service.TrainerConnectRequestService;
+import com.gym.vo.AppointmentBookingDetailVO;
+import com.gym.vo.DailyStatisticVO;
+import com.gym.vo.DynamicAppointmentStatisticsVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,6 +43,9 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
 
     @Autowired
     private NotificationService notificationService;
+
+    @Autowired
+    private AppointmentBookingDao appointmentBookingDao;
 
     @Override
     @Transactional
@@ -63,9 +72,10 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
         if (!availability.getStatus().equals(TrainerAvailability.AvailabilityStatus.Available)) {
             throw new CustomException(ErrorCode.BAD_REQUEST, "The selected time slot is no longer available.");
         }
-        if (availability.getStartTime().isBefore(LocalDateTime.now())) {
-            throw new CustomException(ErrorCode.BAD_REQUEST, "The selected time slot has already passed.");
+        if (availability.getStartTime().isBefore(LocalDateTime.now().plusHours(1))) {
+            throw new CustomException(ErrorCode.BAD_REQUEST, "The selected time slot is too soon; please select a time at least one hour from now.");
         }
+
 
         // 3. 更新可用时间状态为 Booked
         // 3. （此处不更新可用时间状态，允许多个人申请）
@@ -234,6 +244,154 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
         }
     }
 
+    @Override
+    public Page<AppointmentBookingDetailVO> getUpcomingAppointmentsForMember(Long memberId, Page<AppointmentBookingDetailVO> page) {
+        // 先更新状态：过期和完成的
+        expireOldPendingAppointments(memberId);
+        updateCompletedAppointments(memberId);
+        // 分页查询仅返回状态为 Pending 和 Approved 的记录，并且对应的 TrainerAvailability.start_time > NOW()
+        return baseMapper.selectUpcomingAppointmentsByMember(page, memberId);
+    }
 
+
+    /**
+     * 批量检查并更新当前会员所有 Pending 预约，若对应可用时间不足1小时，则更新状态为 Expired
+     *
+     * @param memberId 当前会员ID
+     */
+    private void expireOldPendingAppointments(Long memberId) {
+        // 查询当前会员所有 Pending 预约
+        LambdaQueryWrapper<AppointmentBooking> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(AppointmentBooking::getMemberId, memberId)
+                .eq(AppointmentBooking::getAppointmentStatus, AppointmentBooking.AppointmentStatus.Pending);
+        List<AppointmentBooking> pendingList = this.list(queryWrapper);
+        LocalDateTime cutoff = LocalDateTime.now().plusHours(1);
+        for (AppointmentBooking booking : pendingList) {
+            TrainerAvailability availability = trainerAvailabilityService.getById(booking.getAvailabilityId());
+            if (availability == null || availability.getStartTime().isBefore(cutoff)) {
+                booking.setAppointmentStatus(AppointmentBooking.AppointmentStatus.Expired);
+                this.updateById(booking);
+                // 可选：通知会员申请已过期
+                Notification notification = Notification.builder()
+                        .userId(booking.getMemberId())
+                        .title("Appointment Expired")
+                        .message("Your appointment request for project '" + booking.getProjectName() + "' has expired due to insufficient lead time.")
+                        .type(Notification.NotificationType.INFO)
+                        .isRead(false)
+                        .build();
+                notificationService.sendNotification(notification);
+            }
+        }
+    }
+
+    /**
+     * 检查当前会员所有 Approved 预约，如果对应 TrainerAvailability 的 end_time 已经过了当前时间，则更新状态为 Completed
+     */
+    private void updateCompletedAppointments(Long memberId) {
+        LambdaQueryWrapper<AppointmentBooking> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(AppointmentBooking::getMemberId, memberId)
+                .eq(AppointmentBooking::getAppointmentStatus, AppointmentBooking.AppointmentStatus.Approved);
+        List<AppointmentBooking> approvedList = this.list(queryWrapper);
+        for (AppointmentBooking booking : approvedList) {
+            TrainerAvailability availability = trainerAvailabilityService.getById(booking.getAvailabilityId());
+            if (availability != null && availability.getEndTime().isBefore(LocalDateTime.now())) {
+                booking.setAppointmentStatus(AppointmentBooking.AppointmentStatus.Completed);
+                this.updateById(booking);
+                // 可选：通知会员课程已完成
+                Notification notification = Notification.builder()
+                        .userId(booking.getMemberId())
+                        .title("Appointment Completed")
+                        .message("Your appointment for project '" + booking.getProjectName() + "' has been completed.")
+                        .type(Notification.NotificationType.INFO)
+                        .isRead(false)
+                        .build();
+                notificationService.sendNotification(notification);
+            }
+        }
+    }
+
+    @Override
+    public Page<AppointmentBookingDetailVO> getHistoricalAppointmentsForMember(Long memberId, Page<AppointmentBookingDetailVO> page) {
+        // 查询历史记录：状态不是 Pending 和 Approved（包括 Expired、Rejected、Cancelled、Completed）
+        return baseMapper.selectHistoricalAppointmentsByMember(page, memberId);
+    }
+
+
+    @Override
+    @Transactional
+    public void cancelAppointment(Long appointmentId, Long memberId) {
+        // 1. 查询预约记录
+        AppointmentBooking booking = this.getById(appointmentId);
+        if (booking == null) {
+            throw new CustomException(ErrorCode.NOT_FOUND, "Appointment booking not found.");
+        }
+        // 2. 校验预约是否属于当前会员
+        if (!booking.getMemberId().equals(memberId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN, "You are not authorized to cancel this appointment.");
+        }
+        // 3. 判断预约状态
+        if (booking.getAppointmentStatus() == AppointmentBooking.AppointmentStatus.Pending) {
+            // 对于 Pending 状态，允许直接取消
+            booking.setAppointmentStatus(AppointmentBooking.AppointmentStatus.Cancelled);
+            boolean updated = this.updateById(booking);
+            if (!updated) {
+                throw new CustomException(ErrorCode.BAD_REQUEST, "Failed to cancel the appointment.");
+            }
+            // 发送通知给教练，告知该预约已被取消
+            Notification notification = Notification.builder()
+                    .userId(booking.getTrainerId())
+                    .title("Appointment Cancelled")
+                    .message("The appointment request for project '" + booking.getProjectName() + "' has been cancelled by the member.")
+                    .type(Notification.NotificationType.INFO)
+                    .isRead(false)
+                    .build();
+            notificationService.sendNotification(notification);
+            log.info("Member [{}] cancelled appointment [{}]", memberId, appointmentId);
+        } else if (booking.getAppointmentStatus() == AppointmentBooking.AppointmentStatus.Approved) {
+            // 对于已 Approved 的预约，不允许直接取消，提示用户通过私下沟通取消
+            throw new CustomException(ErrorCode.BAD_REQUEST, "Approved appointments cannot be cancelled directly. Please contact your trainer.");
+        } else {
+            // 其他状态（如 Expired、Cancelled、Completed等）不允许取消
+            throw new CustomException(ErrorCode.BAD_REQUEST, "This appointment cannot be cancelled.");
+        }
+    }
+
+    @Override
+    public DynamicAppointmentStatisticsVO getDynamicAppointmentStatisticsForMember(Long memberId, LocalDate startDate, LocalDate endDate) {
+        // 校验日期范围：确保 startDate <= endDate 且不超过30天
+        if (startDate.isAfter(endDate)) {
+            throw new CustomException(ErrorCode.BAD_REQUEST, "Start date must be before or equal to end date.");
+        }
+        if (ChronoUnit.DAYS.between(startDate, endDate) > 30) {
+            throw new CustomException(ErrorCode.BAD_REQUEST, "Date range should not exceed 30 days.");
+        }
+
+        // 调用 DAO 层查询每日统计数据
+        List<DailyStatisticVO> dailyStats =
+                appointmentBookingDao.selectDynamicStatisticsByMember(memberId, startDate, endDate);
+
+//        比如，如果会员在 2 月 1 日完成了 2 小时的课程，2 月 3 日完成了 1 小时的课程，那么 DAO 可能返回的列表是：
+//         [DailyStatisticVO(date=2025-02-01, hours=2), DailyStatisticVO(date=2025-02-03, hours=1)]
+
+//        补全日期数据：
+//        前端希望看到完整的日期序列，也就是说，在指定日期范围内的每一天都应该有一个统计数据，即使有的天没有数据，也显示 0。
+//        代码通过一个 for 循环，从 startDate 到 endDate（包含头尾日期），依次检查：
+//        对于每个日期，使用 lambda 表达式在 DAO 返回的 dailyStats 列表中查找是否有对应的记录（即该日期的数据）。
+//        如果找到了，就使用该记录；如果没有找到，则创建一个新的 DailyStatisticVO 对象，设置该日期和 0 小时。
+//        最后，构造出一个完整的列表 completeStats，保证整个日期范围内每天都有统计数据。
+        List<DailyStatisticVO> completeStats = new ArrayList<>();
+        for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+            final LocalDate currentDate = date; // 确保在 lambda 中使用 final 变量
+            DailyStatisticVO stat = dailyStats.stream()
+                    .filter(ds -> ds.getDate().equals(currentDate))
+                    .findFirst()
+                    .orElse(DailyStatisticVO.builder().date(currentDate).hours(0).build());
+            completeStats.add(stat);
+        }
+
+        return DynamicAppointmentStatisticsVO.builder()
+                .dailyStatistics(completeStats)
+                .build();
+    }
 }
 

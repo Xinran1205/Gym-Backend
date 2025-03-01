@@ -104,14 +104,15 @@ public class TrainerAvailabilityServiceImpl extends ServiceImpl<TrainerAvailabil
 
     @Override
     public List<AvailabilitySlotDTO> getAvailableSlots(Long trainerId) {
-        LocalDateTime now = LocalDateTime.now();
+        // 计算缓冲时间：当前时间加1小时
+        LocalDateTime cutoff = LocalDateTime.now().plusHours(1);
         LambdaQueryWrapper<TrainerAvailability> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(TrainerAvailability::getTrainerId, trainerId)
                 .eq(TrainerAvailability::getStatus, TrainerAvailability.AvailabilityStatus.Available)
-                .ge(TrainerAvailability::getStartTime, now)
+                .ge(TrainerAvailability::getStartTime, cutoff)
                 .orderByAsc(TrainerAvailability::getStartTime)
-                // 只选择 start_time 和 end_time 字段
-                .select(TrainerAvailability::getStartTime, TrainerAvailability::getEndTime);
+                // 只选择 availabilityId、start_time 和 end_time 字段
+                .select(TrainerAvailability::getAvailabilityId, TrainerAvailability::getStartTime, TrainerAvailability::getEndTime);
 
         List<TrainerAvailability> availabilityList = this.list(queryWrapper);
 
@@ -123,6 +124,7 @@ public class TrainerAvailabilityServiceImpl extends ServiceImpl<TrainerAvailabil
                         .build())
                 .collect(Collectors.toList());
     }
+
 
 }
 

@@ -6,6 +6,7 @@ import lombok.*;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
+// 没有使用！
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
