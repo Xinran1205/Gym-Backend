@@ -140,13 +140,13 @@ public class MemberController {
     @GetMapping("/appointments/upcoming")
     public RestResult<?> getUpcomingAppointments(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int pageSize) {
+            @RequestParam(defaultValue = "10") int pageSize, String status) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
         if (currentUserId == null) {
             throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
         }
         Page<AppointmentBookingDetailVO> appointmentPage = new Page<>(page, pageSize);
-        appointmentPage = appointmentBookingService.getUpcomingAppointmentsForMember(currentUserId, appointmentPage);
+        appointmentPage = appointmentBookingService.getUpcomingAppointmentsForMember(currentUserId, appointmentPage, status);
         return RestResult.success(appointmentPage, "Upcoming appointments retrieved successfully.");
     }
 
@@ -157,13 +157,13 @@ public class MemberController {
     @GetMapping("/appointments/history")
     public RestResult<?> getHistoricalAppointments(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int pageSize) {
+            @RequestParam(defaultValue = "10") int pageSize, String status) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
         if (currentUserId == null) {
             throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
         }
         Page<AppointmentBookingDetailVO> appointmentPage = new Page<>(page, pageSize);
-        appointmentPage = appointmentBookingService.getHistoricalAppointmentsForMember(currentUserId, appointmentPage);
+        appointmentPage = appointmentBookingService.getHistoricalAppointmentsForMember(currentUserId, appointmentPage, status);
         return RestResult.success(appointmentPage, "Historical appointments retrieved successfully.");
     }
 

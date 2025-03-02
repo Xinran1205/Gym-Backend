@@ -2,13 +2,11 @@ package com.gym.filter;
 
 import com.gym.entity.User;
 import com.gym.service.RedisCacheService;
-import com.gym.service.UserService;
 import com.gym.util.JwtUtils;
 import com.gym.util.UserRoleUtil;
 import io.jsonwebtoken.Claims;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;

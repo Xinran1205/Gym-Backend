@@ -25,11 +25,19 @@ public interface AppointmentBookingDao extends BaseMapper<AppointmentBooking> {
             "JOIN users u ON ab.trainer_id = u.user_id " +
             "WHERE ab.member_id = #{memberId} " +
             "AND ta.start_time &gt; NOW() " +
-            "AND ab.appointment_status IN ('Pending','Approved') " +
+            " <choose> " +
+            "   <when test='status != null and status != \"\"'> " +
+            "       AND ab.appointment_status = #{status} " +
+            "   </when> " +
+            "   <otherwise> " +
+            "       AND ab.appointment_status IN ('Pending','Approved') " +
+            "   </otherwise> " +
+            " </choose> " +
             "ORDER BY ta.start_time" +
             "</script>")
-    Page<AppointmentBookingDetailVO> selectUpcomingAppointmentsByMember(Page<?> page, @Param("memberId") Long memberId);
-
+    Page<AppointmentBookingDetailVO> selectUpcomingAppointmentsByMember(Page<?> page,
+                                                                        @Param("memberId") Long memberId,
+                                                                        @Param("status") String status);
     @Select("<script>" +
             "SELECT ab.appointment_id, ab.project_name, ab.description, " +
             "       ab.appointment_status, ab.created_at AS bookingCreatedAt, " +
@@ -39,11 +47,19 @@ public interface AppointmentBookingDao extends BaseMapper<AppointmentBooking> {
             "JOIN trainer_availability ta ON ab.availability_id = ta.availability_id " +
             "JOIN users u ON ab.trainer_id = u.user_id " +
             "WHERE ab.member_id = #{memberId} " +
-            "AND ab.appointment_status NOT IN ('Pending','Approved') " +
+            " <choose> " +
+            "   <when test='status != null and status != \"\"'> " +
+            "       AND ab.appointment_status = #{status} " +
+            "   </when> " +
+            "   <otherwise> " +
+            "       AND ab.appointment_status NOT IN ('Pending','Approved') " +
+            "   </otherwise> " +
+            " </choose> " +
             "ORDER BY ta.start_time DESC" +
             "</script>")
-    Page<AppointmentBookingDetailVO> selectHistoricalAppointmentsByMember(Page<?> page, @Param("memberId") Long memberId);
-
+    Page<AppointmentBookingDetailVO> selectHistoricalAppointmentsByMember(Page<?> page,
+                                                                          @Param("memberId") Long memberId,
+                                                                          @Param("status") String status);
 
     @Select("<script>" +
             "SELECT DATE(ta.end_time) AS date, COUNT(*) AS hours " +

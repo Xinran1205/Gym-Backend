@@ -245,12 +245,12 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
     }
 
     @Override
-    public Page<AppointmentBookingDetailVO> getUpcomingAppointmentsForMember(Long memberId, Page<AppointmentBookingDetailVO> page) {
+    public Page<AppointmentBookingDetailVO> getUpcomingAppointmentsForMember(Long memberId, Page<AppointmentBookingDetailVO> page,String status) {
         // 先更新状态：过期和完成的
         expireOldPendingAppointments(memberId);
         updateCompletedAppointments(memberId);
         // 分页查询仅返回状态为 Pending 和 Approved 的记录，并且对应的 TrainerAvailability.start_time > NOW()
-        return baseMapper.selectUpcomingAppointmentsByMember(page, memberId);
+        return baseMapper.selectUpcomingAppointmentsByMember(page, memberId,status);
     }
 
 
@@ -311,9 +311,9 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
     }
 
     @Override
-    public Page<AppointmentBookingDetailVO> getHistoricalAppointmentsForMember(Long memberId, Page<AppointmentBookingDetailVO> page) {
+    public Page<AppointmentBookingDetailVO> getHistoricalAppointmentsForMember(Long memberId, Page<AppointmentBookingDetailVO> page,String status) {
         // 查询历史记录：状态不是 Pending 和 Approved（包括 Expired、Rejected、Cancelled、Completed）
-        return baseMapper.selectHistoricalAppointmentsByMember(page, memberId);
+        return baseMapper.selectHistoricalAppointmentsByMember(page, memberId,status);
     }
 
 

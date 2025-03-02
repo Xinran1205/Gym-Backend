@@ -40,29 +40,27 @@ public interface AppointmentBookingService extends IService<AppointmentBooking> 
     void rejectAppointment(AppointmentDecisionDTO dto, Long trainerId);
 
     List<AppointmentBooking> getPendingAppointmentsForTrainer(Long trainerId);
-
     /**
      * 分页查询当前会员未来预约的详细信息，
-     * 先更新 Pending/Approved 状态下已过期或已结束的记录，
-     * 返回状态为 Pending 和 Approved 的记录。
+     * 默认返回状态为 Pending 和 Approved，如果传入 status 参数，则按照该状态过滤。
      *
      * @param memberId 当前会员ID
      * @param page 分页对象
-     * @return 分页预约详情
+     * @param status 可选状态过滤条件
+     * @return 分页结果
      */
-    Page<AppointmentBookingDetailVO> getUpcomingAppointmentsForMember(Long memberId, Page<AppointmentBookingDetailVO> page);
+    Page<AppointmentBookingDetailVO> getUpcomingAppointmentsForMember(Long memberId, Page<AppointmentBookingDetailVO> page, String status);
 
     /**
      * 分页查询当前会员历史预约记录，
-     * 返回状态不是 Pending 和 Approved 的记录。
+     * 默认返回状态不为 Pending 和 Approved，如果传入 status 参数，则按照该状态过滤。
      *
      * @param memberId 当前会员ID
      * @param page 分页对象
-     * @return 分页历史预约详情
+     * @param status 可选状态过滤条件
+     * @return 分页结果
      */
-    Page<AppointmentBookingDetailVO> getHistoricalAppointmentsForMember(Long memberId, Page<AppointmentBookingDetailVO> page);
-
-
+    Page<AppointmentBookingDetailVO> getHistoricalAppointmentsForMember(Long memberId, Page<AppointmentBookingDetailVO> page, String status);
     /**
      * 取消预约请求
      * 对于状态为 Pending 的预约，可以直接取消；如果状态为 Approved，则不允许直接取消。
