@@ -1,5 +1,6 @@
 package com.gym.vo;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.gym.entity.User;
 import lombok.*;
 
@@ -23,5 +24,6 @@ public class UserProfileResponse {
 
     private User.Role role;
 
+    @JsonProperty("isGoogle")
     private boolean isGoogle;
 }
