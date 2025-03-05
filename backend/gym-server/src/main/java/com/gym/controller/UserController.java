@@ -166,4 +166,12 @@ public class UserController {
         notificationService.deleteNotification(notificationId, currentUserId);
         return RestResult.success(null, "Notification deleted successfully.");
     }
+
+    @PostMapping("/google-login")
+    public RestResult<LoginResponse> googleLogin(@RequestBody @Valid GoogleLoginRequest request) {
+        // 1. 直接调用 AuthService 里专门处理谷歌登录的方法
+        LoginResponse loginResponse = authService.loginWithGoogle(request.getIdToken());
+        // 2. 返回和普通登录一样的响应结构
+        return RestResult.success(loginResponse, "Google Login success.");
+    }
 }

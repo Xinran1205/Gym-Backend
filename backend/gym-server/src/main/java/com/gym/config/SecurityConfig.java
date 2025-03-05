@@ -54,7 +54,7 @@ public class SecurityConfig {
         // 2. 配置哪些接口放行（例如注册、登录、验证码接口）
         http.authorizeHttpRequests()
                 .antMatchers("/user/signup", "/user/verify-code", "/user/login",
-                        "/user/forgot-password", "/user/reset-password"
+                        "/user/forgot-password", "/user/reset-password", "/user/google-login"
                 // swagger
                         // http://localhost:8080/doc.html  swagger地址，后期上线可以关闭
                 ,"/favicon.ico", "/swagger-resources/**", "/swagger-ui.html", "/doc.html", "/webjars/**",

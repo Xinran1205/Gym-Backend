@@ -1,6 +1,10 @@
 package com.gym.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.jackson2.JacksonFactory;
 import com.gym.dto.ForgotPasswordRequest;
 import com.gym.dto.LoginRequest;
 import com.gym.dto.ResetPasswordRequest;
@@ -14,8 +18,12 @@ import com.gym.util.JwtUtils;
 import com.gym.vo.LoginResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.Collections;
+import java.util.UUID;
 
 
 @Service
@@ -36,6 +44,106 @@ public class AuthServiceImpl implements AuthService {
 
     @Autowired
     private RedisCacheServiceImpl redisCacheService;
+
+    @Value("${google.clientId}")
+    private String googleClientId;
+
+    /**
+     * 使用谷歌 ID Token 登录
+     * @param googleIdToken 前端传来的谷歌ID Token
+     * @return LoginResponse
+     */
+    @Override
+    public LoginResponse loginWithGoogle(String googleIdToken) {
+        // 1. 验证并解析 Google ID Token
+        GoogleIdToken.Payload payload = verifyGoogleIdToken(googleIdToken);
+        // 如果验证失败，verifyGoogleIdToken 会抛异常或返回 null，视你实现而定
+        if (payload == null) {
+            throw new CustomException(ErrorCode.BAD_REQUEST, "Invalid Google ID Token.");
+        }
+
+        // 2. 从 payload 中获取关键信息： email、sub(谷歌唯一标识)、name 等
+        String email = payload.getEmail();
+        String googleUserId = payload.getSubject(); // sub
+        String name = (String) payload.get("name");
+
+        log.info("Google user info: email={}, sub={}, name={}", email, googleUserId, name);
+
+        // 3. 在数据库中查找是否有对应用户
+        User user = userService.getByEmail(email);
+        if (user == null) {
+            // 如果用户不存在，则先自动注册一个新账号
+            user = registerNewGoogleUser(email, name);
+            LoginResponse resp = new LoginResponse();
+            return resp;
+
+        } else {
+            // 如果用户已存在，你可以选择更新用户信息，比如更新 name 等
+            // user.setName(name);
+            // userService.updateById(user);
+        }
+
+        // 4. 检查用户状态（如 Pending、Suspended）
+        if (user.getAccountStatus() == User.AccountStatus.Pending) {
+            throw new CustomException(ErrorCode.BAD_REQUEST, "Your account is pending admin review.");
+        }
+        if (user.getAccountStatus() == User.AccountStatus.Suspended) {
+            throw new CustomException(ErrorCode.BAD_REQUEST, "Your account is suspended.");
+        }
+
+        // 5. 生成系统自己的 JWT
+        String token = jwtUtils.generateToken(user);
+        LoginResponse resp = new LoginResponse();
+        resp.setToken(token);
+        resp.setUserId(user.getUserID());
+        resp.setRole(user.getRole());
+
+        return resp;
+    }
+
+    /**
+     * 使用 Google 提供的库验证 ID Token
+     */
+    private GoogleIdToken.Payload verifyGoogleIdToken(String idTokenString) {
+        try {
+            // 构造一个 verifier
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new JacksonFactory())
+                    .setAudience(Collections.singletonList(googleClientId))
+                    .build();
+
+            GoogleIdToken idToken = verifier.verify(idTokenString);
+            if (idToken != null) {
+                return idToken.getPayload();
+            } else {
+                log.error("Invalid ID Token, verify returned null.");
+                return null;
+            }
+        } catch (Exception e) {
+            log.error("Google ID Token verify exception: ", e);
+            return null;
+        }
+    }
+
+    /**
+     * 针对全新的 Google 用户，自动生成一个账号并写入数据库
+     */
+    private User registerNewGoogleUser(String email, String name) {
+        User newUser = new User();
+        newUser.setEmail(email);
+        newUser.setName(name);
+        // 如果你允许后续用账号密码登录，可以设置一个随机密码，或留空
+        // 这里只做个示例
+//        newUser.setPasswordHash(passwordEncoder.encode(UUID.randomUUID().toString()));
+        newUser.setRole(User.Role.member);
+        newUser.setAccountStatus(User.AccountStatus.Pending);
+        // 也可以直接设为 Approved 看你业务需要
+
+        userService.createUser(newUser);  // 你已有的创建逻辑
+
+        // 如果需要异步创建其他信息，也可以在这里发布事件或做后续操作
+        return newUser;
+    }
+
 
     @Override
     public LoginResponse login(LoginRequest loginReq) {
