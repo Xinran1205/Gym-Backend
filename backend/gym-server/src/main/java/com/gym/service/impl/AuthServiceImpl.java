@@ -5,6 +5,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
+import com.gym.dto.ChangePasswordRequest;
 import com.gym.dto.ForgotPasswordRequest;
 import com.gym.dto.LoginRequest;
 import com.gym.dto.ResetPasswordRequest;
@@ -15,6 +16,7 @@ import com.gym.service.AuthService;
 import com.gym.service.MailService;
 import com.gym.service.UserService;
 import com.gym.util.JwtUtils;
+import com.gym.util.SecurityUtils;
 import com.gym.vo.LoginResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -209,6 +211,28 @@ public class AuthServiceImpl implements AuthService {
         userService.updateById(user);
         redisCacheService.updateUser(user);
         log.info("User password reset success, email={}", email);
+    }
+
+    @Override
+    public void changePassword(ChangePasswordRequest request) {
+        // 获取当前登录用户的ID
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        // 根据用户ID查询用户信息
+        User user = userService.getById(currentUserId);
+        if (user == null) {
+            throw new CustomException(ErrorCode.BAD_REQUEST, "User not found.");
+        }
+        // 校验用户输入的旧密码是否正确
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
+            throw new CustomException(ErrorCode.BAD_REQUEST, "Old password is incorrect.");
+        }
+        // 更新新密码（先加密再存储）
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        // 更新数据库
+        boolean updateSuccess = userService.updateById(user);
+        if (!updateSuccess) {
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to update password. Please try again.");
+        }
     }
 }
 

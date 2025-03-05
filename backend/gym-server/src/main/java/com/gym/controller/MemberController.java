@@ -64,6 +64,7 @@ public class MemberController {
         if (user == null) {
             throw new CustomException(ErrorCode.NOT_FOUND, "User not found.");
         }
+
         // vo 类，将 User 对象转换为 UserProfileResponse 对象
         UserProfileResponse response = UserProfileResponse.builder()
                 .name(user.getName())
@@ -72,6 +73,7 @@ public class MemberController {
                 .email(user.getEmail())
                 .address(user.getAddress())
                 .role(user.getRole())
+                .isGoogle(user.getPasswordHash() == null)
                 .build();
         return RestResult.success(response, "User profile retrieved successfully.");
     }

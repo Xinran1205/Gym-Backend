@@ -1,5 +1,6 @@
 package com.gym.service;
 
+import com.gym.dto.ChangePasswordRequest;
 import com.gym.dto.ForgotPasswordRequest;
 import com.gym.dto.LoginRequest;
 import com.gym.dto.ResetPasswordRequest;
@@ -12,5 +13,6 @@ public interface AuthService {
     void forgotPassword(ForgotPasswordRequest request);
     void resetPassword(ResetPasswordRequest request);
     LoginResponse loginWithGoogle(String googleIdToken);
+    public void changePassword(ChangePasswordRequest request);
 }
 

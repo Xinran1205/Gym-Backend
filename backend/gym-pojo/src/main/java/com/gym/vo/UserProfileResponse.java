@@ -22,4 +22,6 @@ public class UserProfileResponse {
     private String address;
 
     private User.Role role;
+
+    private boolean isGoogle;
 }

@@ -116,6 +116,16 @@ public class UserController {
                 "Please log in with your new password.");
     }
 
+    @PostMapping("/change-password")
+    public RestResult<?> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
+        }
+        authService.changePassword(request);
+        return RestResult.success(null, "Password changed successfully.");
+    }
+
     /**
      * 更新用户个人资料
      */
@@ -128,7 +138,6 @@ public class UserController {
         userService.updateUserProfile(currentUserId, request);
         return RestResult.success("Updated", "User profile updated successfully.");
     }
-
 
 
 
