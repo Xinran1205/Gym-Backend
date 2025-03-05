@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.gym.dto.SignupRequest;
 import com.gym.dto.UserProfileDTO;
 import com.gym.dto.VerifyCodeRequest;
+import com.gym.entity.Specializations;
 import com.gym.entity.User;
 
 import java.util.List;
@@ -21,5 +22,11 @@ public interface UserService extends IService<User> {
     User createUser(User user);
     User getUserById(Long userID);
     User getByEmail(String email);
+
+    /**
+     * 查询所有专长常量
+     * @return List of Specializations
+     */
+    List<Specializations> listSpecializations();
 }
 

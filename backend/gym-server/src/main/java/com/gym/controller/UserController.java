@@ -7,6 +7,7 @@ import com.gym.bloomFilter.BloomFilterUtil;
 import com.gym.dto.*;
 import com.gym.dto.redis.PendingPasswordReset;
 import com.gym.entity.Notification;
+import com.gym.entity.Specializations;
 import com.gym.entity.TrainerProfile;
 import com.gym.service.*;
 import com.gym.service.impl.RedisCacheServiceImpl;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @RestController
@@ -182,5 +184,14 @@ public class UserController {
         LoginResponse loginResponse = authService.loginWithGoogle(request.getIdToken());
         // 2. 返回和普通登录一样的响应结构
         return RestResult.success(loginResponse, "Google Login success.");
+    }
+
+    // 查询所有专长常量接口
+    @GetMapping("/specializations")
+    public RestResult<?> listSpecializations() {
+        // 调用 Service 层方法查询所有专长数据
+        List<Specializations> specializations = userService.listSpecializations();
+        // 使用 RestResult.success 封装返回结果，前端将收到 code、message、data 三部分
+        return RestResult.success(specializations, "Specializations retrieved successfully.");
     }
 }

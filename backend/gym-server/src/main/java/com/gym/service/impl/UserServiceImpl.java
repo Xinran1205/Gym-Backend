@@ -4,11 +4,13 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.gym.bloomFilter.BloomFilterUtil;
+import com.gym.dao.SpecializationsDao;
 import com.gym.dao.UserDao;
 import com.gym.dto.PendingVerification;
 import com.gym.dto.SignupRequest;
 import com.gym.dto.UserProfileDTO;
 import com.gym.dto.VerifyCodeRequest;
+import com.gym.entity.Specializations;
 import com.gym.entity.User;
 import com.gym.enumeration.ErrorCode;
 import com.gym.event.UserCreatedEvent;
@@ -22,6 +24,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -45,6 +48,9 @@ public class UserServiceImpl extends ServiceImpl<UserDao, User> implements UserS
 
     @Autowired
     private BloomFilterUtil bloomFilterUtil;
+
+    @Autowired
+    private SpecializationsDao Specializationsdao;
 
     @Override
     public void sendSignupVerification(SignupRequest signupRequest) {
@@ -129,6 +135,12 @@ public class UserServiceImpl extends ServiceImpl<UserDao, User> implements UserS
     private String generateRandomCode() {
         int code = (int) ((Math.random() * 9 + 1) * 100000);
         return String.valueOf(code);
+    }
+
+    @Override
+    public List<Specializations> listSpecializations() {
+        // 使用 MyBatis-Plus 提供的 selectList(null) 查询所有记录
+        return Specializationsdao.selectList(null);
     }
 
     @Override
