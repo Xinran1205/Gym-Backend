@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.gym.entity.AppointmentBooking;
 import com.gym.vo.AppointmentBookingDetailVO;
+import com.gym.vo.AppointmentBookingHistoryDetailVO;
 import com.gym.vo.DailyStatisticVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -43,10 +44,13 @@ public interface AppointmentBookingDao extends BaseMapper<AppointmentBooking> {
             "SELECT ab.appointment_id, ab.project_name, ab.description, " +
             "       ab.appointment_status, ab.created_at AS bookingCreatedAt, " +
             "       ta.start_time AS sessionStartTime, ta.end_time AS sessionEndTime, " +
-            "       u.name AS trainerName " +
+            "       u.name AS trainerName, " +
+            "       alt.alternative_trainer_id AS alternativeTrainerId, " +
+            "       alt.alternative_trainer_name AS alternativeTrainerName " +
             "FROM appointment_bookings ab " +
             "JOIN trainer_availability ta ON ab.availability_id = ta.availability_id " +
             "JOIN users u ON ab.trainer_id = u.user_id " +
+            "LEFT JOIN appointment_alternative_trainer alt ON ab.appointment_id = alt.appointment_id " +
             "WHERE ab.member_id = #{memberId} " +
             " <choose> " +
             "   <when test='status != null and status != \"\"'> " +
@@ -56,11 +60,12 @@ public interface AppointmentBookingDao extends BaseMapper<AppointmentBooking> {
             "       AND ab.appointment_status NOT IN ('Pending','Approved') " +
             "   </otherwise> " +
             " </choose> " +
-            "ORDER BY ta.start_time DESC" +
+            "ORDER BY ab.updated_at DESC" +
             "</script>")
-    Page<AppointmentBookingDetailVO> selectHistoricalAppointmentsByMember(Page<?> page,
-                                                                          @Param("memberId") Long memberId,
-                                                                          @Param("status") String status);
+    Page<AppointmentBookingHistoryDetailVO> selectHistoricalAppointmentsByMember(Page<?> page,
+                                                                                 @Param("memberId") Long memberId,
+                                                                                 @Param("status") String status);
+
 
     @Select("<script>" +
             "SELECT DATE(ta.end_time) AS date, COUNT(*) AS hours " +

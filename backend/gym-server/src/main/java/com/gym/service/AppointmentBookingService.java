@@ -4,8 +4,10 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.gym.dto.AppointmentBookingDTO;
 import com.gym.dto.AppointmentDecisionDTO;
+import com.gym.dto.AppointmentDecisionRejectDTO;
 import com.gym.entity.AppointmentBooking;
 import com.gym.vo.AppointmentBookingDetailVO;
+import com.gym.vo.AppointmentBookingHistoryDetailVO;
 import com.gym.vo.DynamicAppointmentStatisticsVO;
 
 import java.time.LocalDate;
@@ -37,7 +39,7 @@ public interface AppointmentBookingService extends IService<AppointmentBooking> 
      * @param dto       包含预约ID和可选反馈信息
      * @param trainerId 当前教练ID
      */
-    void rejectAppointment(AppointmentDecisionDTO dto, Long trainerId);
+    void rejectAppointment(AppointmentDecisionRejectDTO dto, Long trainerId);
 
     List<AppointmentBooking> getPendingAppointmentsForTrainer(Long trainerId);
     /**
@@ -60,7 +62,7 @@ public interface AppointmentBookingService extends IService<AppointmentBooking> 
      * @param status 可选状态过滤条件
      * @return 分页结果
      */
-    Page<AppointmentBookingDetailVO> getHistoricalAppointmentsForMember(Long memberId, Page<AppointmentBookingDetailVO> page, String status);
+    Page<AppointmentBookingHistoryDetailVO> getHistoricalAppointmentsForMember(Long memberId, Page<AppointmentBookingHistoryDetailVO> page, String status);
     /**
      * 取消预约请求
      * 对于状态为 Pending 的预约，可以直接取消；如果状态为 Approved，则不允许直接取消。

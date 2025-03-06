@@ -3,13 +3,12 @@ package com.gym.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.gym.dao.AppointmentAlternativeTrainerDao;
 import com.gym.dao.AppointmentBookingDao;
 import com.gym.dto.AppointmentBookingDTO;
 import com.gym.dto.AppointmentDecisionDTO;
-import com.gym.entity.AppointmentBooking;
-import com.gym.entity.Notification;
-import com.gym.entity.TrainerAvailability;
-import com.gym.entity.TrainerConnectRequest;
+import com.gym.dto.AppointmentDecisionRejectDTO;
+import com.gym.entity.*;
 import com.gym.enumeration.ErrorCode;
 import com.gym.exception.CustomException;
 import com.gym.service.AppointmentBookingService;
@@ -17,6 +16,7 @@ import com.gym.service.NotificationService;
 import com.gym.service.TrainerAvailabilityService;
 import com.gym.service.TrainerConnectRequestService;
 import com.gym.vo.AppointmentBookingDetailVO;
+import com.gym.vo.AppointmentBookingHistoryDetailVO;
 import com.gym.vo.DailyStatisticVO;
 import com.gym.vo.DynamicAppointmentStatisticsVO;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +46,9 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
 
     @Autowired
     private AppointmentBookingDao appointmentBookingDao;
+
+    @Autowired
+    private AppointmentAlternativeTrainerDao appointmentAlternativeTrainerDao;
 
     @Override
     @Transactional
@@ -169,7 +172,7 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
 
     @Override
     @Transactional
-    public void rejectAppointment(AppointmentDecisionDTO dto, Long trainerId) {
+    public void rejectAppointment(AppointmentDecisionRejectDTO dto, Long trainerId) {
         // 1. 查询预约记录
         AppointmentBooking booking = this.getById(dto.getAppointmentId());
         if (booking == null) {
@@ -189,6 +192,16 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
 
         // 4. 更新预约状态为 Rejected
         booking.setAppointmentStatus(AppointmentBooking.AppointmentStatus.Rejected);
+        // 5. 如果有指定替代教练，则在 appointment_alternative_trainer 表中插入记录
+        if (dto.getAlternativeTrainerId() != null) {
+            AppointmentAlternativeTrainer alternative = AppointmentAlternativeTrainer.builder()
+                    .appointmentId(dto.getAppointmentId())
+                    .alternativeTrainerId(dto.getAlternativeTrainerId())
+                    .alternativeTrainerName(dto.getAlternativeTrainerName())
+                    .build();
+            appointmentAlternativeTrainerDao.insert(alternative);
+        }
+
         boolean updated = this.updateById(booking);
         if (!updated) {
             throw new CustomException(ErrorCode.BAD_REQUEST, "Failed to update appointment booking.");
@@ -198,7 +211,9 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
                 .userId(booking.getMemberId())
                 .title("Appointment Rejected")
                 .message("Your appointment for project '" + booking.getProjectName() + "' has been rejected by the trainer." +
-                        (dto.getResponseMessage() != null ? " Note: " + dto.getResponseMessage() : ""))
+                        (dto.getResponseMessage() != null ? " Note: " + dto.getResponseMessage() : "") +
+                        // 如果没有替代教练，显示None, 这里通知里面显示的是替代教练的名字！
+                        " Alternative trainer: " + (dto.getAlternativeTrainerName() == null ? "None" : dto.getAlternativeTrainerName()))
                 .type(Notification.NotificationType.INFO)
                 .isRead(false)
                 .build();
@@ -319,7 +334,7 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
     }
 
     @Override
-    public Page<AppointmentBookingDetailVO> getHistoricalAppointmentsForMember(Long memberId, Page<AppointmentBookingDetailVO> page,String status) {
+    public Page<AppointmentBookingHistoryDetailVO> getHistoricalAppointmentsForMember(Long memberId, Page<AppointmentBookingHistoryDetailVO> page, String status) {
         // 查询历史记录：状态不是 Pending 和 Approved（包括 Expired、Rejected、Cancelled、Completed）
         return baseMapper.selectHistoricalAppointmentsByMember(page, memberId,status);
     }

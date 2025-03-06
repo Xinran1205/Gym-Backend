@@ -23,6 +23,16 @@ public class TrainerConnectRequestServiceImpl extends ServiceImpl<TrainerConnect
     @Autowired
     private NotificationService notificationService;
 
+    // 判断当前 member 是否已和指定 trainer 建立连接
+    @Override
+    public boolean isConnected(Long memberId, Long trainerId) {
+        LambdaQueryWrapper<TrainerConnectRequest> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(TrainerConnectRequest::getMemberId, memberId)
+                .eq(TrainerConnectRequest::getTrainerId, trainerId)
+                .eq(TrainerConnectRequest::getStatus, TrainerConnectRequest.RequestStatus.Accepted);
+        return this.count(queryWrapper) > 0;
+    }
+
     // 统计指定 member 当前待审核（Pending）状态的连接申请数量
     @Override
     public int countPendingRequests(Long memberId) {

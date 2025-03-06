@@ -8,10 +8,7 @@ import com.gym.exception.CustomException;
 import com.gym.result.RestResult;
 import com.gym.service.*;
 import com.gym.util.SecurityUtils;
-import com.gym.vo.AppointmentBookingDetailVO;
-import com.gym.vo.DynamicAppointmentStatisticsVO;
-import com.gym.vo.TrainerProfileVO;
-import com.gym.vo.UserProfileResponse;
+import com.gym.vo.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -164,7 +161,7 @@ public class MemberController {
         if (currentUserId == null) {
             throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
         }
-        Page<AppointmentBookingDetailVO> appointmentPage = new Page<>(page, pageSize);
+        Page<AppointmentBookingHistoryDetailVO> appointmentPage = new Page<>(page, pageSize);
         appointmentPage = appointmentBookingService.getHistoricalAppointmentsForMember(currentUserId, appointmentPage, status);
         return RestResult.success(appointmentPage, "Historical appointments retrieved successfully.");
     }
@@ -202,6 +199,22 @@ public class MemberController {
         }
         DynamicAppointmentStatisticsVO statistics = appointmentBookingService.getDynamicAppointmentStatisticsForMember(currentUserId, startDate, endDate);
         return RestResult.success(statistics, "Appointment statistics retrieved successfully.");
+    }
+
+    /**
+     * 判断当前会员是否已与指定教练建立连接（即连接申请被接受）
+     *
+     * @param trainerId 教练的ID，由前端传入
+     * @return 连接状态，true 表示已连接，false 表示未连接
+     */
+    @GetMapping("/is-connected/{trainerId}")
+    public RestResult<?> isConnectedWithTrainer(@PathVariable("trainerId") Long trainerId) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
+        }
+        boolean connected = trainerConnectRequestService.isConnected(currentUserId, trainerId);
+        return RestResult.success(connected, "Connection status retrieved successfully.");
     }
 
 }

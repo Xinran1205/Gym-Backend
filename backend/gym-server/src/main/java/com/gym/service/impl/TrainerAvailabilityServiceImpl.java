@@ -67,6 +67,7 @@ public class TrainerAvailabilityServiceImpl extends ServiceImpl<TrainerAvailabil
                 toInsert.add(avail);
             }
         }
+        // 批量插入数据
         if (!toInsert.isEmpty()) {
             this.saveBatch(toInsert);
         }
@@ -80,6 +81,7 @@ public class TrainerAvailabilityServiceImpl extends ServiceImpl<TrainerAvailabil
                 })
                 .map(TrainerAvailability::getAvailabilityId)
                 .collect(Collectors.toList());
+        // 批量删除数据
         if (!toDeleteIds.isEmpty()) {
             this.removeByIds(toDeleteIds);
         }

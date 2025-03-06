@@ -19,5 +19,14 @@ public interface TrainerConnectRequestService extends IService<TrainerConnectReq
     void acceptConnectRequest(TrainerConnectDecisionDTO dto, Long trainerId);
 
     void rejectConnectRequest(TrainerConnectDecisionDTO dto, Long trainerId);
+
+    /**
+     * 判断当前 member 是否已和指定 trainer 建立连接
+     *
+     * @param memberId 当前 member 的ID
+     * @param trainerId 指定 trainer 的ID
+     * @return true 表示已连接，false 表示未连接
+     */
+    boolean isConnected(Long memberId, Long trainerId);
 }
 

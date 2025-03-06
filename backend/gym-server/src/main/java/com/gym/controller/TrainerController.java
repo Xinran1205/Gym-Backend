@@ -195,7 +195,7 @@ public class TrainerController {
      * 前端传入 AppointmentDecisionDTO，其中包含预约ID和可选反馈信息
      */
     @PutMapping("/appointment/reject")
-    public RestResult<?> rejectAppointment(@Valid @RequestBody AppointmentDecisionDTO decisionDTO) {
+    public RestResult<?> rejectAppointment(@Valid @RequestBody AppointmentDecisionRejectDTO decisionDTO) {
         Long currentTrainerId = SecurityUtils.getCurrentUserId();
         if (currentTrainerId == null) {
             throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
