@@ -6,16 +6,14 @@ import com.gym.AOP.RateLimit;
 import com.gym.bloomFilter.BloomFilterUtil;
 import com.gym.dto.*;
 import com.gym.dto.redis.PendingPasswordReset;
-import com.gym.entity.Notification;
-import com.gym.entity.Specializations;
-import com.gym.entity.TrainerProfile;
+import com.gym.entity.*;
 import com.gym.service.*;
 import com.gym.service.impl.RedisCacheServiceImpl;
 import com.gym.util.IpUtil;
 import com.gym.util.SecurityUtils;
 import com.gym.util.TencentCaptchaUtil;
+import com.gym.vo.FitnessCentreVO;
 import com.gym.vo.LoginResponse;
-import com.gym.entity.User;
 import com.gym.enumeration.ErrorCode;
 import com.gym.exception.CustomException;
 import com.gym.result.RestResult;
@@ -30,6 +28,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/user")
@@ -47,6 +46,9 @@ public class UserController {
 
     @Autowired
     private NotificationService notificationService;
+
+    @Autowired
+    private FitnessCentreService fitnessCentreService;
 
     // 用于生成腾讯机器人验证码
     private void validateCaptcha(String captchaTicket, String captchaRandstr, HttpServletRequest request) {
@@ -142,7 +144,6 @@ public class UserController {
     }
 
 
-
     // 新增接口：分页查询当前user（可能是member可能是教练）的通知列表（业务逻辑在 service 层）
     @GetMapping("/notifications")
     public RestResult<?> getNotifications(@RequestParam(defaultValue = "1") Integer page,
@@ -193,5 +194,33 @@ public class UserController {
         List<Specializations> specializations = userService.listSpecializations();
         // 使用 RestResult.success 封装返回结果，前端将收到 code、message、data 三部分
         return RestResult.success(specializations, "Specializations retrieved successfully.");
+    }
+
+    // 查询地点
+    /**
+     * 查询所有健身房地点
+     * 前端需要的字段：
+     * - title：展示名称（目前直接使用健身房的 name 字段，如有连锁信息，可在此扩展）
+     * - address：标准英文地址（包含邮编）
+     * - latitude：经度
+     * - longitude：纬度
+     * - contactInfo：联系方式
+     */
+    @GetMapping("/locations")
+    public RestResult<?> getFitnessCentreLocations() {
+        // 查询所有健身房记录，MyBatis-Plus 提供 list() 方法
+        List<FitnessCentre> centres = fitnessCentreService.list();
+
+        // 将实体转换为 VO
+        List<FitnessCentreVO> voList = centres.stream().map(centre -> FitnessCentreVO.builder()
+                        .title(centre.getName())  // 如有连锁需要可以改造，例如 "Chain: " + centre.getName()
+                        .address(centre.getAddress())
+                        .latitude(centre.getLatitude())
+                        .longitude(centre.getLongitude())
+                        .contactInfo(centre.getContactInfo())
+                        .build())
+                .collect(Collectors.toList());
+
+        return RestResult.success(voList, "Locations retrieved successfully.");
     }
 }

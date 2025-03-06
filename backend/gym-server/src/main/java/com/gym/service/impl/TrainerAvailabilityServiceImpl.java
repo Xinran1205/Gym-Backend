@@ -5,8 +5,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.gym.dao.TrainerAvailabilityDao;
 import com.gym.dto.AvailabilitySlotDTO;
 import com.gym.entity.TrainerAvailability;
-import com.gym.enumeration.ErrorCode;
-import com.gym.exception.CustomException;
 import com.gym.service.TrainerAvailabilityService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

@@ -37,6 +37,7 @@ public class FitnessCentre implements Serializable {
     @TableField("contact_info")
     private String contactInfo;
 
+    // 这个字段可能不需要
     @TableField("description")
     private String description;
 
