@@ -76,6 +76,14 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
             throw new CustomException(ErrorCode.BAD_REQUEST, "The selected time slot is too soon; please select a time at least one hour from now.");
         }
 
+        // 新增步骤：校验当前用户在该时间段内是否已经有 pending 或 approved 状态的预约
+        LocalDateTime newStartTime = availability.getStartTime();
+        LocalDateTime newEndTime = availability.getEndTime();
+        int conflictCount = appointmentBookingDao.countOverlappingAppointments(memberId, newStartTime, newEndTime);
+        if (conflictCount > 0) {
+            throw new CustomException(ErrorCode.BAD_REQUEST, "You already have an appointment in this time slot.");
+        }
+
 
         // 3. 更新可用时间状态为 Booked
         // 3. （此处不更新可用时间状态，允许多个人申请）
