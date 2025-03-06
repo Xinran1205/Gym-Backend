@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.gym.dto.TrainerProfileQuery;
 import com.gym.entity.TrainerProfile;
-import com.gym.entity.TrainingHistory;
 import com.gym.vo.TrainerProfileVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
