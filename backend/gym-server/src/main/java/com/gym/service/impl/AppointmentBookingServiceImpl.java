@@ -20,6 +20,8 @@ import com.gym.vo.AppointmentBookingHistoryDetailVO;
 import com.gym.vo.DailyStatisticVO;
 import com.gym.vo.DynamicAppointmentStatisticsVO;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,11 +52,14 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
     @Autowired
     private AppointmentAlternativeTrainerDao appointmentAlternativeTrainerDao;
 
+    // 新增：注入 RedissonClient，用于分布式锁
+    @Autowired
+    private RedissonClient redissonClient;
+
     @Override
     @Transactional
     public void bookSession(AppointmentBookingDTO dto, Long memberId) {
-        // 1. 校验学员与该教练之间是否存在已连接（Accepted）的关系
-        // 其实这一步不需要，前端那边是灰的
+        // 1. 校验学员与教练之间是否已连接
         LambdaQueryWrapper<TrainerConnectRequest> connectWrapper = new LambdaQueryWrapper<>();
         connectWrapper.eq(TrainerConnectRequest::getMemberId, memberId)
                 .eq(TrainerConnectRequest::getTrainerId, dto.getTrainerId())
@@ -64,7 +69,7 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
             throw new CustomException(ErrorCode.FORBIDDEN, "You are not connected with this trainer.");
         }
 
-        // 2. 校验所选可用时间是否存在且有效
+        // 2. 校验所选时间段是否存在且有效
         TrainerAvailability availability = trainerAvailabilityService.getById(dto.getAvailabilityId());
         if (availability == null) {
             throw new CustomException(ErrorCode.NOT_FOUND, "Selected time slot not found.");
@@ -73,13 +78,13 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
             throw new CustomException(ErrorCode.BAD_REQUEST, "The selected time slot does not belong to the specified trainer.");
         }
         if (!availability.getStatus().equals(TrainerAvailability.AvailabilityStatus.Available)) {
-            throw new CustomException(ErrorCode.BAD_REQUEST, "The selected time slot is no longer available.");
+            throw new CustomException(ErrorCode.BAD_REQUEST, "The selected time slot is not available.");
         }
         if (availability.getStartTime().isBefore(LocalDateTime.now().plusHours(1))) {
             throw new CustomException(ErrorCode.BAD_REQUEST, "The selected time slot is too soon; please select a time at least one hour from now.");
         }
 
-        // 新增步骤：校验当前用户在该时间段内是否已经有 pending 或 approved 状态的预约
+        // 3. 校验当前用户是否已有冲突预约
         LocalDateTime newStartTime = availability.getStartTime();
         LocalDateTime newEndTime = availability.getEndTime();
         int conflictCount = appointmentBookingDao.countOverlappingAppointments(memberId, newStartTime, newEndTime);
@@ -87,42 +92,126 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
             throw new CustomException(ErrorCode.BAD_REQUEST, "You already have an appointment in this time slot.");
         }
 
+        // 4. 使用分布式锁锁定该可用时段，确保并发处理安全
+        String lockKey = "appointment:lock:" + dto.getAvailabilityId();
+        RLock lock = redissonClient.getLock(lockKey);
+        lock.lock();
+        try {
+            // 再次查询并检查最新状态
+            TrainerAvailability currentAvailability = trainerAvailabilityService.getById(dto.getAvailabilityId());
+            if (currentAvailability == null || !currentAvailability.getStatus().equals(TrainerAvailability.AvailabilityStatus.Available)) {
+                throw new CustomException(ErrorCode.BAD_REQUEST, "The selected time slot is no longer available.");
+            }
 
-        // 3. 更新可用时间状态为 Booked
-        // 3. （此处不更新可用时间状态，允许多个人申请）
-//        availability.setStatus(TrainerAvailability.AvailabilityStatus.Booked);
-//        boolean availUpdate = trainerAvailabilityService.updateById(availability);
-//        if (!availUpdate) {
-//            throw new CustomException(ErrorCode.BAD_REQUEST, "Failed to update availability status.");
-//        }
+            // 5. 将时段状态更新为 Booked（预约时立即锁定资源）
+            currentAvailability.setStatus(TrainerAvailability.AvailabilityStatus.Booked);
+            trainerAvailabilityService.updateById(currentAvailability);
 
-        // 4. 创建预约记录，初始状态为 Pending
-        AppointmentBooking booking = AppointmentBooking.builder()
-                .memberId(memberId)
-                .trainerId(dto.getTrainerId())
-                .availabilityId(dto.getAvailabilityId())
-                .projectName(dto.getProjectName())
-                .description(dto.getDescription())
-                .appointmentStatus(AppointmentBooking.AppointmentStatus.Pending)
-                .build();
-        boolean inserted = this.save(booking);
-        if (!inserted) {
-            throw new CustomException(ErrorCode.BAD_REQUEST, "Failed to create appointment booking.");
+            // 6. 创建预约记录，初始状态为 Pending
+            AppointmentBooking booking = AppointmentBooking.builder()
+                    .memberId(memberId)
+                    .trainerId(dto.getTrainerId())
+                    .availabilityId(dto.getAvailabilityId())
+                    .projectName(dto.getProjectName())
+                    .description(dto.getDescription())
+                    .appointmentStatus(AppointmentBooking.AppointmentStatus.Pending)
+                    .build();
+            boolean inserted = this.save(booking);
+            if (!inserted) {
+                throw new CustomException(ErrorCode.BAD_REQUEST, "Failed to create appointment booking.");
+            }
+
+            // 7. 发送通知给教练审核预约请求
+            Notification notification = Notification.builder()
+                    .userId(dto.getTrainerId())
+                    .title("New Session Appointment Request")
+                    .message("You have a new session appointment request for project: " + dto.getProjectName())
+                    .type(Notification.NotificationType.INFO)
+                    .isRead(false)
+                    .build();
+            notificationService.sendNotification(notification);
+
+            log.info("Appointment booking created successfully: Appointment id [{}] for member [{}] and trainer [{}]",
+                    booking.getAppointmentId(), memberId, dto.getTrainerId());
+        } finally {
+            lock.unlock();
         }
-
-        // 5. 发送通知给教练审核预约请求
-        Notification notification = Notification.builder()
-                .userId(dto.getTrainerId())  // 通知目标为教练
-                .title("New Session Appointment Request")
-                .message("You have a new session appointment request for project: " + dto.getProjectName())
-                .type(Notification.NotificationType.INFO)
-                .isRead(false)
-                .build();
-        notificationService.sendNotification(notification);
-
-        log.info("Appointment booking created successfully: Appointment id [{}] for member [{}] and trainer [{}]",
-                booking.getAppointmentId(), memberId, dto.getTrainerId());
     }
+
+
+//    @Override
+//    @Transactional
+//    public void bookSession(AppointmentBookingDTO dto, Long memberId) {
+//        // 1. 校验学员与该教练之间是否存在已连接（Accepted）的关系
+//        // 其实这一步不需要，前端那边是灰的
+//        LambdaQueryWrapper<TrainerConnectRequest> connectWrapper = new LambdaQueryWrapper<>();
+//        connectWrapper.eq(TrainerConnectRequest::getMemberId, memberId)
+//                .eq(TrainerConnectRequest::getTrainerId, dto.getTrainerId())
+//                .eq(TrainerConnectRequest::getStatus, TrainerConnectRequest.RequestStatus.Accepted);
+//        TrainerConnectRequest connection = trainerConnectRequestService.getOne(connectWrapper);
+//        if (connection == null) {
+//            throw new CustomException(ErrorCode.FORBIDDEN, "You are not connected with this trainer.");
+//        }
+//
+//        // 2. 校验所选可用时间是否存在且有效
+//        TrainerAvailability availability = trainerAvailabilityService.getById(dto.getAvailabilityId());
+//        if (availability == null) {
+//            throw new CustomException(ErrorCode.NOT_FOUND, "Selected time slot not found.");
+//        }
+//        if (!availability.getTrainerId().equals(dto.getTrainerId())) {
+//            throw new CustomException(ErrorCode.BAD_REQUEST, "The selected time slot does not belong to the specified trainer.");
+//        }
+//        if (!availability.getStatus().equals(TrainerAvailability.AvailabilityStatus.Available)) {
+//            throw new CustomException(ErrorCode.BAD_REQUEST, "The selected time slot is no longer available.");
+//        }
+//        if (availability.getStartTime().isBefore(LocalDateTime.now().plusHours(1))) {
+//            throw new CustomException(ErrorCode.BAD_REQUEST, "The selected time slot is too soon; please select a time at least one hour from now.");
+//        }
+//
+//        // 新增步骤：校验当前用户在该时间段内是否已经有 pending 或 approved 状态的预约
+//        LocalDateTime newStartTime = availability.getStartTime();
+//        LocalDateTime newEndTime = availability.getEndTime();
+//        int conflictCount = appointmentBookingDao.countOverlappingAppointments(memberId, newStartTime, newEndTime);
+//        if (conflictCount > 0) {
+//            throw new CustomException(ErrorCode.BAD_REQUEST, "You already have an appointment in this time slot.");
+//        }
+//
+//
+//        // 3. 更新可用时间状态为 Booked
+//        // 3. （此处不更新可用时间状态，允许多个人申请）
+////        availability.setStatus(TrainerAvailability.AvailabilityStatus.Booked);
+////        boolean availUpdate = trainerAvailabilityService.updateById(availability);
+////        if (!availUpdate) {
+////            throw new CustomException(ErrorCode.BAD_REQUEST, "Failed to update availability status.");
+////        }
+//
+//        // 4. 创建预约记录，初始状态为 Pending
+//        AppointmentBooking booking = AppointmentBooking.builder()
+//                .memberId(memberId)
+//                .trainerId(dto.getTrainerId())
+//                .availabilityId(dto.getAvailabilityId())
+//                .projectName(dto.getProjectName())
+//                .description(dto.getDescription())
+//                .appointmentStatus(AppointmentBooking.AppointmentStatus.Pending)
+//                .build();
+//        boolean inserted = this.save(booking);
+//        if (!inserted) {
+//            throw new CustomException(ErrorCode.BAD_REQUEST, "Failed to create appointment booking.");
+//        }
+//
+//        // 5. 发送通知给教练审核预约请求
+//        Notification notification = Notification.builder()
+//                .userId(dto.getTrainerId())  // 通知目标为教练
+//                .title("New Session Appointment Request")
+//                .message("You have a new session appointment request for project: " + dto.getProjectName())
+//                .type(Notification.NotificationType.INFO)
+//                .isRead(false)
+//                .build();
+//        notificationService.sendNotification(notification);
+//
+//        log.info("Appointment booking created successfully: Appointment id [{}] for member [{}] and trainer [{}]",
+//                booking.getAppointmentId(), memberId, dto.getTrainerId());
+//    }
 
     @Override
     @Transactional
@@ -149,13 +238,15 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
         if (!updated) {
             throw new CustomException(ErrorCode.BAD_REQUEST, "Failed to update appointment booking.");
         }
-        // 5. 更新对应的可用时间状态为 Booked
-        // 这里太对了！！！
-        TrainerAvailability availability = trainerAvailabilityService.getById(booking.getAvailabilityId());
-        if (availability != null) {
-            availability.setStatus(TrainerAvailability.AvailabilityStatus.Booked);
-            trainerAvailabilityService.updateById(availability);
-        }
+
+        // 不再修改 TrainerAvailability 状态，因为预约时已锁定
+//        // 5. 更新对应的可用时间状态为 Booked
+//        // 这里太对了！！！
+//        TrainerAvailability availability = trainerAvailabilityService.getById(booking.getAvailabilityId());
+//        if (availability != null) {
+//            availability.setStatus(TrainerAvailability.AvailabilityStatus.Booked);
+//            trainerAvailabilityService.updateById(availability);
+//        }
         // 6. 发送通知给学员
         Notification notification = Notification.builder()
                 .userId(booking.getMemberId())
@@ -206,6 +297,14 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
         if (!updated) {
             throw new CustomException(ErrorCode.BAD_REQUEST, "Failed to update appointment booking.");
         }
+
+        // 更新时段状态为 Available
+        TrainerAvailability availability = trainerAvailabilityService.getById(booking.getAvailabilityId());
+        if (availability != null) {
+            availability.setStatus(TrainerAvailability.AvailabilityStatus.Available);
+            trainerAvailabilityService.updateById(availability);
+        }
+
         // 5. 发送通知给学员
         Notification notification = Notification.builder()
                 .userId(booking.getMemberId())
@@ -360,6 +459,13 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
             if (!updated) {
                 throw new CustomException(ErrorCode.BAD_REQUEST, "Failed to cancel the appointment.");
             }
+            // 更新可用时段状态为 Available（释放预约时锁定的时段）
+            TrainerAvailability availability = trainerAvailabilityService.getById(booking.getAvailabilityId());
+            if (availability != null) {
+                availability.setStatus(TrainerAvailability.AvailabilityStatus.Available);
+                trainerAvailabilityService.updateById(availability);
+            }
+
             // 发送通知给教练，告知该预约已被取消
             Notification notification = Notification.builder()
                     .userId(booking.getTrainerId())
