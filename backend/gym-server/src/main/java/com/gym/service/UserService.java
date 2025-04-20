@@ -1,6 +1,7 @@
 package com.gym.service;
 
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.gym.dto.SignupRequest;
 import com.gym.dto.UserProfileDTO;
@@ -34,5 +35,13 @@ public interface UserService extends IService<User> {
      * 查询所有教练（排除自己），只返回 trainerId 和 name
      */
     List<TrainerBasicInfoVO> listOtherTrainersBasicInfo(Long excludeTrainerId);
+
+    /**
+     * Paginated query for all users whose accountStatus is Pending.
+     *
+     * @param page Page object (current, size)
+     * @return paged result with pending users
+     */
+    Page<User> getPendingUsers(Page<User> page);
 }
 

@@ -2,6 +2,7 @@ package com.gym.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.gym.bloomFilter.BloomFilterUtil;
 import com.gym.dao.SpecializationsDao;
@@ -138,6 +139,14 @@ public class UserServiceImpl extends ServiceImpl<UserDao, User> implements UserS
                         .name(u.getName())
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public Page<User> getPendingUsers(Page<User> page) {
+        QueryWrapper<User> wrapper = new QueryWrapper<>();
+        wrapper.eq("account_status", User.AccountStatus.Pending)
+                .orderByAsc("created_at");              // oldest first
+        return this.page(page, wrapper);
     }
 
 

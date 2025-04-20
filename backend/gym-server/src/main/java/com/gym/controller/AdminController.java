@@ -3,6 +3,7 @@ package com.gym.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.gym.dto.UserEmail;
 import com.gym.entity.User;
 import com.gym.enumeration.ErrorCode;
@@ -73,6 +74,21 @@ public class AdminController {
         }
 
         return RestResult.success("Rejected", "User application rejected (suspended) successfully.");
+    }
+
+    /**
+     * List all users whose account is pending approval
+     *
+     * Example: GET /admin/pending-users?page=1&pageSize=20
+     */
+    @GetMapping("/pending-users")
+    public RestResult<?> listPendingUsers(
+            @RequestParam(defaultValue = "1")      int page,
+            @RequestParam(defaultValue = "10")     int pageSize) {
+
+        Page<User> result = userService.getPendingUsers(new Page<>(page, pageSize));
+        return RestResult.success(result,
+                "Pending users retrieved successfully.");
     }
 
 }
