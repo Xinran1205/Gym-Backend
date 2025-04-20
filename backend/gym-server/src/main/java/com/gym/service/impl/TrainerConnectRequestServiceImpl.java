@@ -15,6 +15,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @Slf4j
 public class TrainerConnectRequestServiceImpl extends ServiceImpl<TrainerConnectRequestDao, TrainerConnectRequest>
@@ -135,5 +137,15 @@ public class TrainerConnectRequestServiceImpl extends ServiceImpl<TrainerConnect
                 .build();
         notificationService.sendNotification(notification);
     }
+
+    @Override
+    public List<TrainerConnectRequest> getPendingConnectRequestsForTrainer(Long trainerId) {
+        LambdaQueryWrapper<TrainerConnectRequest> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(TrainerConnectRequest::getTrainerId, trainerId)
+                .eq(TrainerConnectRequest::getStatus, TrainerConnectRequest.RequestStatus.Pending)
+                .orderByAsc(TrainerConnectRequest::getCreatedAt);
+        return this.list(wrapper);
+    }
+
 }
 

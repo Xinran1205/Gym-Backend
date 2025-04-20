@@ -17,6 +17,7 @@ import com.gym.event.UserCreatedEvent;
 import com.gym.exception.CustomException;
 import com.gym.service.MailService;
 import com.gym.service.UserService;
+import com.gym.vo.TrainerBasicInfoVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -119,6 +121,26 @@ public class UserServiceImpl extends ServiceImpl<UserDao, User> implements UserS
         }
         log.info("User [{}] profile updated successfully", userId);
     }
+
+
+    @Override
+    public List<TrainerBasicInfoVO> listOtherTrainersBasicInfo(Long excludeTrainerId) {
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("role", User.Role.trainer)                       // 只要是 trainer
+                .ne(excludeTrainerId != null, "user_id", excludeTrainerId) // 排除自己
+                .select("user_id", "name");                          // 仅查所需列
+
+        List<User> trainers = baseMapper.selectList(queryWrapper);
+
+        return trainers.stream()
+                .map(u -> TrainerBasicInfoVO.builder()
+                        .trainerId(u.getUserID())
+                        .name(u.getName())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+
 
     // 将 SignupRequest 转换为 User 实体
     private User convertSignupRequestToUser(SignupRequest req) {

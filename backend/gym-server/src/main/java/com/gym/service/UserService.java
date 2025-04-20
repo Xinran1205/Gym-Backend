@@ -7,6 +7,7 @@ import com.gym.dto.UserProfileDTO;
 import com.gym.dto.VerifyCodeRequest;
 import com.gym.entity.Specializations;
 import com.gym.entity.User;
+import com.gym.vo.TrainerBasicInfoVO;
 
 import java.util.List;
 
@@ -28,5 +29,10 @@ public interface UserService extends IService<User> {
      * @return List of Specializations
      */
     List<Specializations> listSpecializations();
+
+    /**
+     * 查询所有教练（排除自己），只返回 trainerId 和 name
+     */
+    List<TrainerBasicInfoVO> listOtherTrainersBasicInfo(Long excludeTrainerId);
 }
 

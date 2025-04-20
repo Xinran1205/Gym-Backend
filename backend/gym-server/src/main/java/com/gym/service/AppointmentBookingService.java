@@ -9,6 +9,7 @@ import com.gym.entity.AppointmentBooking;
 import com.gym.vo.AppointmentBookingDetailVO;
 import com.gym.vo.AppointmentBookingHistoryDetailVO;
 import com.gym.vo.DynamicAppointmentStatisticsVO;
+import com.gym.vo.MemberAppointmentsVO;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -84,5 +85,22 @@ public interface AppointmentBookingService extends IService<AppointmentBooking> 
      */
     DynamicAppointmentStatisticsVO getDynamicAppointmentStatisticsForMember
     (Long memberId, LocalDate startDate, LocalDate endDate);
+
+
+
+    /**
+     * 教练查询所有状态为 Approved 的预约
+     */
+    List<AppointmentBooking> getApprovedAppointmentsForTrainer(Long trainerId);
+
+    /**
+     * 教练将指定预约标记为 Completed
+     */
+    void completeAppointment(Long appointmentId, Long trainerId);
+
+    /**
+     * 教练查询自己的全部预约，并按学员分组
+     */
+    List<MemberAppointmentsVO> getAllAppointmentsGroupedByMember(Long trainerId);
 }
 

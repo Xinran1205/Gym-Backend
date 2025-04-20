@@ -11,14 +11,8 @@ import com.gym.dto.AppointmentDecisionRejectDTO;
 import com.gym.entity.*;
 import com.gym.enumeration.ErrorCode;
 import com.gym.exception.CustomException;
-import com.gym.service.AppointmentBookingService;
-import com.gym.service.NotificationService;
-import com.gym.service.TrainerAvailabilityService;
-import com.gym.service.TrainerConnectRequestService;
-import com.gym.vo.AppointmentBookingDetailVO;
-import com.gym.vo.AppointmentBookingHistoryDetailVO;
-import com.gym.vo.DailyStatisticVO;
-import com.gym.vo.DynamicAppointmentStatisticsVO;
+import com.gym.service.*;
+import com.gym.vo.*;
 import lombok.extern.slf4j.Slf4j;
 //import org.redisson.api.RLock;
 //import org.redisson.api.RedissonClient;
@@ -31,6 +25,10 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -51,6 +49,9 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
 
     @Autowired
     private AppointmentAlternativeTrainerDao appointmentAlternativeTrainerDao;
+
+    @Autowired
+    private UserService userService;   // 需要获取学员姓名
 
     // 新增：注入 RedissonClient，用于分布式锁
 //    @Autowired
@@ -522,5 +523,94 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
                 .dailyStatistics(completeStats)
                 .build();
     }
+
+
+
+    @Override
+    public List<AppointmentBooking> getApprovedAppointmentsForTrainer(Long trainerId) {
+        LambdaQueryWrapper<AppointmentBooking> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(AppointmentBooking::getTrainerId, trainerId)
+                .eq(AppointmentBooking::getAppointmentStatus, AppointmentBooking.AppointmentStatus.Approved)
+                .orderByAsc(AppointmentBooking::getCreatedAt);
+        return this.list(queryWrapper);
+    }
+
+    @Override
+    @Transactional
+    public void completeAppointment(Long appointmentId, Long trainerId) {
+        // 1. 基本合法性校验
+        AppointmentBooking booking = this.getById(appointmentId);
+        if (booking == null) {
+            throw new CustomException(ErrorCode.NOT_FOUND, "Appointment booking not found.");
+        }
+        if (!booking.getTrainerId().equals(trainerId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN, "You are not authorized to complete this appointment.");
+        }
+        if (booking.getAppointmentStatus() != AppointmentBooking.AppointmentStatus.Approved) {
+            throw new CustomException(ErrorCode.BAD_REQUEST, "Only approved appointments can be marked as completed.");
+        }
+
+        // 2. 更新预约状态 → Completed
+        booking.setAppointmentStatus(AppointmentBooking.AppointmentStatus.Completed);
+        if (!this.updateById(booking)) {
+            throw new CustomException(ErrorCode.BAD_REQUEST, "Failed to update appointment booking.");
+        }
+
+        // 没必要
+//        // 3. 释放时段（把 Booked 设回 Available，方便后续复用/统计）
+//        TrainerAvailability availability = trainerAvailabilityService.getById(booking.getAvailabilityId());
+//        if (availability != null && availability.getStatus() == TrainerAvailability.AvailabilityStatus.Booked) {
+//            availability.setStatus(TrainerAvailability.AvailabilityStatus.Available);
+//            trainerAvailabilityService.updateById(availability);
+//        }
+
+        // 没必要
+        // 4. 通知学员
+//        Notification notification = Notification.builder()
+//                .userId(booking.getMemberId())
+//                .title("Session Completed")
+//                .message("Your appointment for project '" + booking.getProjectName() +
+//                        "' has been marked as completed by the trainer.")
+//                .type(Notification.NotificationType.INFO)
+//                .isRead(false)
+//                .build();
+//        notificationService.sendNotification(notification);
+
+        log.info("Trainer [{}] completed appointment [{}]", trainerId, appointmentId);
+    }
+
+    @Override
+    public List<MemberAppointmentsVO> getAllAppointmentsGroupedByMember(Long trainerId) {
+
+        // 1. 拉取该教练所有预约，先按 memberId、createdAt 排序
+        LambdaQueryWrapper<AppointmentBooking> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(AppointmentBooking::getTrainerId, trainerId)
+                .orderByAsc(AppointmentBooking::getMemberId)
+                .orderByAsc(AppointmentBooking::getCreatedAt);
+        List<AppointmentBooking> all = this.list(wrapper);
+        if (all.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // 2. 按 memberId 分组
+        Map<Long, List<AppointmentBooking>> grouped =
+                all.stream().collect(Collectors.groupingBy(AppointmentBooking::getMemberId,
+                        LinkedHashMap::new, Collectors.toList()));
+
+        // 3. 构造 VO 列表（按插入顺序，即 memberId 升序）
+        List<MemberAppointmentsVO> result = new ArrayList<>();
+        for (Map.Entry<Long, List<AppointmentBooking>> entry : grouped.entrySet()) {
+            Long memberId = entry.getKey();
+            String name   = Optional.ofNullable(userService.getUserById(memberId))
+                    .map(User::getName).orElse("Unknown");
+            result.add(MemberAppointmentsVO.builder()
+                    .memberId(memberId)
+                    .memberName(name)
+                    .appointments(entry.getValue())
+                    .build());
+        }
+        return result;
+    }
+
 }
 

@@ -5,6 +5,8 @@ import com.gym.dto.TrainerConnectDecisionDTO;
 import com.gym.dto.TrainerConnectRequestDTO;
 import com.gym.entity.TrainerConnectRequest;
 
+import java.util.List;
+
 public interface TrainerConnectRequestService extends IService<TrainerConnectRequest> {
     /**
      * 统计指定 member 当前待审核（Pending）状态的连接申请数量
@@ -28,5 +30,10 @@ public interface TrainerConnectRequestService extends IService<TrainerConnectReq
      * @return true 表示已连接，false 表示未连接
      */
     boolean isConnected(Long memberId, Long trainerId);
+
+    /**
+     * 教练查询所有待审核（Pending）的连接申请
+     */
+    List<TrainerConnectRequest> getPendingConnectRequestsForTrainer(Long trainerId);
 }
 
