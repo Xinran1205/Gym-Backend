@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.gym.dto.TrainerConnectDecisionDTO;
 import com.gym.dto.TrainerConnectRequestDTO;
 import com.gym.entity.TrainerConnectRequest;
+import com.gym.vo.PendingConnectRequestVO;
 
 import java.util.List;
 
@@ -34,6 +35,6 @@ public interface TrainerConnectRequestService extends IService<TrainerConnectReq
     /**
      * 教练查询所有待审核（Pending）的连接申请
      */
-    List<TrainerConnectRequest> getPendingConnectRequestsForTrainer(Long trainerId);
+    List<PendingConnectRequestVO> getPendingConnectRequestsForTrainer(Long trainerId);
 }
 

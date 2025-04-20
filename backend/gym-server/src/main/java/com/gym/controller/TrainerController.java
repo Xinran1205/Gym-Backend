@@ -256,15 +256,16 @@ public class TrainerController {
      */
     @GetMapping("/connect-requests/pending")
     public RestResult<?> getPendingConnectRequests() {
-        Long currentTrainerId = SecurityUtils.getCurrentUserId();
-        if (currentTrainerId == null) {
+        Long trainerId = SecurityUtils.getCurrentUserId();
+        if (trainerId == null) {
             throw new CustomException(ErrorCode.UNAUTHORIZED,
                     "User is not authenticated or session is invalid.");
         }
-        List<TrainerConnectRequest> pendingRequests =
-                trainerConnectRequestService.getPendingConnectRequestsForTrainer(currentTrainerId);
 
-        return RestResult.success(pendingRequests,
+        List<PendingConnectRequestVO> pending =
+                trainerConnectRequestService.getPendingConnectRequestsForTrainer(trainerId);
+
+        return RestResult.success(pending,
                 "Pending connect requests retrieved successfully.");
     }
 

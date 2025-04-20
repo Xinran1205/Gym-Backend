@@ -11,11 +11,18 @@ import com.gym.enumeration.ErrorCode;
 import com.gym.exception.CustomException;
 import com.gym.service.NotificationService;
 import com.gym.service.TrainerConnectRequestService;
+import com.gym.service.UserService;
+import com.gym.vo.PendingConnectRequestVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import com.gym.entity.User;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -24,6 +31,9 @@ public class TrainerConnectRequestServiceImpl extends ServiceImpl<TrainerConnect
 
     @Autowired
     private NotificationService notificationService;
+
+    @Autowired
+    private UserService userService;   // new dependency
 
     // 判断当前 member 是否已和指定 trainer 建立连接
     @Override
@@ -139,12 +149,37 @@ public class TrainerConnectRequestServiceImpl extends ServiceImpl<TrainerConnect
     }
 
     @Override
-    public List<TrainerConnectRequest> getPendingConnectRequestsForTrainer(Long trainerId) {
+    public List<PendingConnectRequestVO> getPendingConnectRequestsForTrainer(Long trainerId) {
+
+        // (1) fetch raw pending requests
         LambdaQueryWrapper<TrainerConnectRequest> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(TrainerConnectRequest::getTrainerId, trainerId)
                 .eq(TrainerConnectRequest::getStatus, TrainerConnectRequest.RequestStatus.Pending)
                 .orderByAsc(TrainerConnectRequest::getCreatedAt);
-        return this.list(wrapper);
+
+        List<TrainerConnectRequest> requests = this.list(wrapper);
+        if (requests.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // (2) batch load member names
+        Set<Long> memberIds = requests.stream()
+                .map(TrainerConnectRequest::getMemberId)
+                .collect(Collectors.toSet());
+
+        Map<Long, String> nameMap = userService.listByIds(memberIds).stream()
+                .collect(Collectors.toMap(User::getUserID, User::getName));
+
+        // (3) map to VO
+        return requests.stream()
+                .map(r -> PendingConnectRequestVO.builder()
+                        .requestId(r.getRequestId())
+                        .memberId(r.getMemberId())
+                        .memberName(nameMap.getOrDefault(r.getMemberId(), "Unknown"))
+                        .requestMessage(r.getRequestMessage())
+                        .createdAt(r.getCreatedAt())
+                        .build())
+                .collect(Collectors.toList());
     }
 
 }
