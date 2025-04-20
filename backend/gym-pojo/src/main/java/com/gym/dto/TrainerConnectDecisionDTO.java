@@ -10,7 +10,7 @@ import javax.validation.constraints.NotBlank;
 @Builder
 @ToString
 public class TrainerConnectDecisionDTO {
-    @NotBlank(message = "Request ID cannot be blank")
+//    @NotBlank(message = "Request ID cannot be blank")
     // 这个是那条申请记录的 ID
     private Long requestId;
 
