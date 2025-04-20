@@ -287,4 +287,22 @@ public class TrainerController {
                 "All appointments grouped by member retrieved successfully.");
     }
 
+    /**
+     * 教练查询已连接 (Accepted) 的全部会员
+     * GET /trainer/connected-members
+     */
+    @GetMapping("/connected-members")
+    public RestResult<?> getConnectedMembers() {
+        Long trainerId = SecurityUtils.getCurrentUserId();
+        if (trainerId == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED,
+                    "User is not authenticated or session is invalid.");
+        }
+        List<ConnectedMemberVO> members =
+                trainerConnectRequestService.listConnectedMembers(trainerId);
+
+        return RestResult.success(members,
+                "Connected members retrieved successfully.");
+    }
+
 }

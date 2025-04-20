@@ -12,6 +12,7 @@ import com.gym.exception.CustomException;
 import com.gym.service.NotificationService;
 import com.gym.service.TrainerConnectRequestService;
 import com.gym.service.UserService;
+import com.gym.vo.ConnectedMemberVO;
 import com.gym.vo.PendingConnectRequestVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.LinkedHashSet;
 
 @Service
 @Slf4j
@@ -182,5 +184,34 @@ public class TrainerConnectRequestServiceImpl extends ServiceImpl<TrainerConnect
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public List<ConnectedMemberVO> listConnectedMembers(Long trainerId) {
+
+        // 1. 查出所有已 Accepted 的连接记录
+        LambdaQueryWrapper<TrainerConnectRequest> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(TrainerConnectRequest::getTrainerId, trainerId)
+                .eq(TrainerConnectRequest::getStatus, TrainerConnectRequest.RequestStatus.Accepted)
+                .select(TrainerConnectRequest::getMemberId);
+        List<TrainerConnectRequest> accepted = this.list(wrapper);
+        if (accepted.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // 2. 去重并批量拉取会员姓名
+        Set<Long> memberIds = accepted.stream()
+                .map(TrainerConnectRequest::getMemberId)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        Map<Long, String> nameMap = userService.listByIds(memberIds).stream()
+                .collect(Collectors.toMap(User::getUserID, User::getName));
+
+        // 3. 组装返回 VO
+        return memberIds.stream()
+                .map(id -> ConnectedMemberVO.builder()
+                        .memberId(id)
+                        .memberName(nameMap.getOrDefault(id, "Unknown"))
+                        .build())
+                .collect(Collectors.toList());
+    }
 }
 
