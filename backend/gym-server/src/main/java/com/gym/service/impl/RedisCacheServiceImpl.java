@@ -56,6 +56,7 @@ public class RedisCacheServiceImpl implements RedisCacheService {
         // 缓存未命中，采用分布式锁避免大量请求并发查询数据库
         String lockKey = "LOCK:USER:" + userId;
         String lockValue = UUID.randomUUID().toString();
+        // 这里就是使用了setNx
         boolean locked = tryLock(lockKey, lockValue, 10);
         if (locked) {
             try {

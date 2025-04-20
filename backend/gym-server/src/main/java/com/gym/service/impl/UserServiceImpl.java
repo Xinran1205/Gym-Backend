@@ -71,6 +71,8 @@ public class UserServiceImpl extends ServiceImpl<UserDao, User> implements UserS
         pv.setCreateTime(System.currentTimeMillis());
         // 4. 保存到 Redis（5分钟有效）
         String redisKey = "SIGNUP_PENDING_" + signupRequest.getEmail();
+        // String 类型来存储对象，只要你的 RedisTemplate 配置了合适的序列化器
+        // （例如 JSON 序列化器），这样对象就会被序列化成字符串存储。
         redisTemplate.opsForValue().set(redisKey, pv, 5, TimeUnit.MINUTES);
         // 5. 发送验证码邮件
         mailService.sendVerificationCode(signupRequest.getEmail(), code);
