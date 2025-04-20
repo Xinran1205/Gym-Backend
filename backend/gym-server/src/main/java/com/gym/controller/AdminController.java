@@ -4,11 +4,17 @@ package com.gym.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.gym.dto.FitnessCentreDTO;
+import com.gym.dto.SpecializationDTO;
 import com.gym.dto.UserEmail;
+import com.gym.entity.FitnessCentre;
+import com.gym.entity.Specializations;
 import com.gym.entity.User;
 import com.gym.enumeration.ErrorCode;
 import com.gym.exception.CustomException;
 import com.gym.result.RestResult;
+import com.gym.service.FitnessCentreService;
+import com.gym.service.SpecializationsService;
 import com.gym.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +22,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.List;
 
 @RestController
 @RequestMapping("/admin")
@@ -27,6 +34,12 @@ public class AdminController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private SpecializationsService specializationsService;  // 新增
+
+    @Autowired
+    private FitnessCentreService fitnessCentreService;  // 新增
 
     /**
      * Approve user application
@@ -89,6 +102,92 @@ public class AdminController {
         Page<User> result = userService.getPendingUsers(new Page<>(page, pageSize));
         return RestResult.success(result,
                 "Pending users retrieved successfully.");
+    }
+
+    /**
+     * 列出所有 Specializations
+     * GET /admin/specializations
+     */
+    @GetMapping("/specializations")
+    public RestResult<?> listSpecializations() {
+        List<Specializations> list = specializationsService.listAllSpecializations();
+        return RestResult.success(list, "Specializations retrieved successfully.");
+    }
+
+    /**
+     * 管理员新增一个 Specialization
+     * POST /admin/specializations
+     */
+    @PostMapping("/specializations")
+    public RestResult<?> addSpecialization(
+            @Valid @RequestBody SpecializationDTO dto) {
+        Specializations created = specializationsService.addSpecialization(dto);
+        return RestResult.success(created, "Specialization added successfully.");
+    }
+
+    /**
+     * 管理员删除一个 Specialization
+     * DELETE /admin/specializations/{id}
+     */
+    @DeleteMapping("/specializations/{id}")
+    public RestResult<?> deleteSpecialization(@PathVariable("id") Long id) {
+        specializationsService.deleteSpecialization(id);
+        return RestResult.success(null, "Specialization deleted successfully.");
+    }
+
+
+
+    /**
+     * List all fitness centres
+     * GET /admin/fitness-centres
+     */
+    @GetMapping("/fitness-centres")
+    public RestResult<?> listFitnessCentres() {
+        List<FitnessCentre> centres = fitnessCentreService.listAllCentres();
+        return RestResult.success(centres, "Fitness centres retrieved successfully.");
+    }
+
+    /**
+     * 这个可能不需要，废弃！
+     * Get a fitness centre by ID
+     * GET /admin/fitness-centres/{id}
+     */
+    @GetMapping("/fitness-centres/{id}")
+    public RestResult<?> getFitnessCentre(@PathVariable Long id) {
+        FitnessCentre centre = fitnessCentreService.getCentreById(id);
+        return RestResult.success(centre, "Fitness centre retrieved successfully.");
+    }
+
+    /**
+     * Create a new fitness centre
+     * POST /admin/fitness-centres
+     */
+    @PostMapping("/fitness-centres")
+    public RestResult<?> addFitnessCentre(@Valid @RequestBody FitnessCentreDTO dto) {
+        FitnessCentre created = fitnessCentreService.addCentre(dto);
+        return RestResult.success(created, "Fitness centre created successfully.");
+    }
+
+    /**
+     * Update an existing fitness centre
+     * PUT /admin/fitness-centres/{id}
+     */
+    @PutMapping("/fitness-centres/{id}")
+    public RestResult<?> updateFitnessCentre(
+            @PathVariable Long id,
+            @Valid @RequestBody FitnessCentreDTO dto) {
+        FitnessCentre updated = fitnessCentreService.updateCentre(id, dto);
+        return RestResult.success(updated, "Fitness centre updated successfully.");
+    }
+
+    /**
+     * Delete a fitness centre
+     * DELETE /admin/fitness-centres/{id}
+     */
+    @DeleteMapping("/fitness-centres/{id}")
+    public RestResult<?> deleteFitnessCentre(@PathVariable Long id) {
+        fitnessCentreService.deleteCentre(id);
+        return RestResult.success(null, "Fitness centre deleted successfully.");
     }
 
 }
