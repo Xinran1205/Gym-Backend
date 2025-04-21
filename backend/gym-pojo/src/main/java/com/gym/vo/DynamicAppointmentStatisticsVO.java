@@ -11,7 +11,7 @@ import java.util.List;
 @ToString
 public class DynamicAppointmentStatisticsVO {
     /**
-     * 日期范围内的每日统计数据列表
+     * List of daily statistics data within the date range
      */
     private List<DailyStatisticVO> dailyStatistics;
 }

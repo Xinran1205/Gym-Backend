@@ -32,6 +32,9 @@ public class AppointmentBooking implements Serializable {
     @TableField("description")
     private String description;
 
+    @TableField("workout_plan_id")   // NEW  FK (nullable)
+    private Long workoutPlanId;
+
     @TableField("appointment_status")
     private AppointmentStatus appointmentStatus; // Pending, Approved, Rejected, Cancelled, Completed
 

@@ -101,6 +101,25 @@ public interface AppointmentBookingDao extends BaseMapper<AppointmentBooking> {
     int countOverlappingAppointments(@Param("memberId") Long memberId,
                                      @Param("newStartTime") LocalDateTime newStartTime,
                                      @Param("newEndTime") LocalDateTime newEndTime);
+
+
+    /* === Trainer dynamic statistics === */
+    @Select("<script>" +
+            "SELECT DATE(ta.end_time)              AS date, " +
+            "       COUNT(*)                       AS hours " +
+            "FROM appointment_bookings ab " +
+                    "JOIN trainer_availability ta " +
+                    "     ON ab.availability_id = ta.availability_id " +
+                    "WHERE ab.trainer_id = #{trainerId} " +
+                    "  AND ab.appointment_status = 'Completed' " +
+                    "  AND ta.end_time BETWEEN #{startDate} AND #{endDate} " +
+                    "GROUP BY DATE(ta.end_time) " +
+                    "ORDER BY date ASC" +
+                    "</script>")
+    List<DailyStatisticVO> selectDynamicStatisticsByTrainer(
+            @Param("trainerId") Long trainerId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate")   LocalDate endDate);
 }
 
 

@@ -104,5 +104,10 @@ public interface AppointmentBookingService extends IService<AppointmentBooking> 
      * 教练查询所有已完成（Completed）的预约
      */
     List<CompletedAppointmentVO> getCompletedAppointmentsForTrainer(Long trainerId);
+
+    DynamicAppointmentStatisticsVO getDynamicAppointmentStatisticsForTrainer(
+            Long trainerId, LocalDate startDate, LocalDate endDate);
+
+    void bindWorkoutPlan(Long trainerId, Long appointmentId, Long planId);
 }
 

@@ -11,11 +11,11 @@ import java.time.LocalDate;
 @ToString
 public class DailyStatisticVO {
     /**
-     * 统计日期
+     * The date for the statistic
      */
     private LocalDate date;
     /**
-     * 当天完成的课程小时数（每条 Completed 记录代表1小时）
+     * The number of completed sessions (1 hour each) on that day
      */
     private Integer hours;
 }

@@ -53,6 +53,9 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
     @Autowired
     private UserService userService;   // 需要获取学员姓名
 
+    @Autowired
+    private WorkoutPlanService workoutPlanService; // 需要获取学员的健身计划
+
     // 新增：注入 RedissonClient，用于分布式锁
 //    @Autowired
 //    private RedissonClient redissonClient;
@@ -642,6 +645,59 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
                         .createdAt(ab.getCreatedAt())
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public DynamicAppointmentStatisticsVO getDynamicAppointmentStatisticsForTrainer(
+            Long trainerId, LocalDate startDate, LocalDate endDate) {
+
+        // ---- 1. 参数校验 ----
+        if (startDate.isAfter(endDate)) {
+            throw new CustomException(ErrorCode.BAD_REQUEST,
+                    "Start date must be before or equal to end date.");
+        }
+        if (ChronoUnit.DAYS.between(startDate, endDate) > 30) {
+            throw new CustomException(ErrorCode.BAD_REQUEST,
+                    "Date range should not exceed 30 days.");
+        }
+
+        // ---- 2. DAO 查询 ----
+        List<DailyStatisticVO> stats =
+                appointmentBookingDao.selectDynamicStatisticsByTrainer(
+                        trainerId, startDate, endDate);
+
+        // ---- 3. 补全缺失日期 ----
+        List<DailyStatisticVO> complete = new ArrayList<>();
+        for (LocalDate d = startDate; !d.isAfter(endDate); d = d.plusDays(1)) {
+            final LocalDate cd = d;
+            DailyStatisticVO dayStat = stats.stream()
+                    .filter(s -> s.getDate().equals(cd))
+                    .findFirst()
+                    .orElse(DailyStatisticVO.builder()
+                            .date(cd)
+                            .hours(0)
+                            .build());
+            complete.add(dayStat);
+        }
+
+        return DynamicAppointmentStatisticsVO.builder()
+                .dailyStatistics(complete)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public void bindWorkoutPlan(Long trainerId, Long appointmentId, Long planId) {
+        AppointmentBooking booking = getById(appointmentId);
+        if (booking == null || !booking.getTrainerId().equals(trainerId))
+            throw new CustomException(ErrorCode.FORBIDDEN, "No permission");
+
+        WorkoutPlan plan = workoutPlanService.getById(planId);
+        if (plan == null || !plan.getTrainerId().equals(trainerId))
+            throw new CustomException(ErrorCode.BAD_REQUEST, "Plan not found or not yours");
+
+        booking.setWorkoutPlanId(planId);
+        updateById(booking);
     }
 }
 

@@ -13,6 +13,7 @@ import com.gym.util.SecurityUtils;
 import com.gym.vo.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,6 +22,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
 
@@ -44,6 +46,9 @@ public class TrainerController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private WorkoutPlanService workoutPlanService;
 
     /**
      * Update the current trainer's profile using DTO.
@@ -320,6 +325,75 @@ public class TrainerController {
                 appointmentBookingService.getCompletedAppointmentsForTrainer(trainerId);
         return RestResult.success(completed,
                 "Completed appointments retrieved successfully.");
+    }
+
+    /**
+     * 教练端：指定日期区间内每天完成的课时（≤30天）
+     * GET /trainer/appointments/statistics/dynamic
+     * ?startDate=2025-04-01&endDate=2025-04-07
+     */
+    @GetMapping("/appointments/statistics/dynamic")
+    public RestResult<?> getDynamicTrainerStatistics(
+            @RequestParam("startDate")
+            @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+            @RequestParam("endDate")
+            @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
+
+        Long trainerId = SecurityUtils.getCurrentUserId();
+        if (trainerId == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED,
+                    "User is not authenticated or session is invalid.");
+        }
+
+        DynamicAppointmentStatisticsVO vo =
+                appointmentBookingService.getDynamicAppointmentStatisticsForTrainer(
+                        trainerId, startDate, endDate);
+
+        return RestResult.success(vo,
+                "Trainer appointment statistics retrieved successfully.");
+    }
+
+
+    // 7‑1  CRUD workout plans
+    @PostMapping("/workout-plans")
+    public RestResult<?> createPlan(@Valid @RequestBody WorkoutPlanDTO dto) {
+        Long trainerId = SecurityUtils.getCurrentUserId();
+        return RestResult.success(
+                workoutPlanService.createPlan(trainerId, dto),
+                "Plan created");
+    }
+
+    @PutMapping("/workout-plans/{planId}")
+    public RestResult<?> updatePlan(@PathVariable Long planId,
+                                    @Valid @RequestBody WorkoutPlanDTO dto) {
+        Long trainerId = SecurityUtils.getCurrentUserId();
+        return RestResult.success(
+                workoutPlanService.updatePlan(trainerId, planId, dto),
+                "Plan updated");
+    }
+
+    @DeleteMapping("/workout-plans/{planId}")
+    public RestResult<?> deletePlan(@PathVariable Long planId) {
+        Long trainerId = SecurityUtils.getCurrentUserId();
+        workoutPlanService.deletePlan(trainerId, planId);
+        return RestResult.success(null, "Plan deleted");
+    }
+
+    @GetMapping("/workout-plans")
+    public RestResult<?> listPlans() {
+        Long trainerId = SecurityUtils.getCurrentUserId();
+        return RestResult.success(
+                workoutPlanService.listPlans(trainerId),
+                "Plans retrieved");
+    }
+
+    // 7‑2  Bind a plan to an appointment
+    @PutMapping("/appointments/{appointmentId}/workout-plan/{planId}")
+    public RestResult<?> bindPlan(@PathVariable Long appointmentId,
+                                  @PathVariable Long planId) {
+        Long trainerId = SecurityUtils.getCurrentUserId();
+        appointmentBookingService.bindWorkoutPlan(trainerId, appointmentId, planId);
+        return RestResult.success(null, "Workout plan bound to appointment");
     }
 
 }
