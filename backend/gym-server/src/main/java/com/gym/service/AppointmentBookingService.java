@@ -90,9 +90,9 @@ public interface AppointmentBookingService extends IService<AppointmentBooking> 
 
 
     /**
-     * 教练查询所有状态为 Approved 的预约
+     * 教练查询所有已批准（Approved）的预约，包含学员姓名与课程时段
      */
-    List<AppointmentBooking> getApprovedAppointmentsForTrainer(Long trainerId);
+    List<PendingAppointmentVO> getApprovedAppointmentsForTrainerWithTimes(Long trainerId);
 
     /**
      * 教练将指定预约标记为 Completed

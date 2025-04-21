@@ -212,17 +212,18 @@ public class TrainerController {
 
 
     /**
-     * 教练查询所有已批准（Approved）的预约  为了标记成完成！
+     * 教练查询所有已批准（Approved）的预约，包含学员姓名与课程时段
      */
     @GetMapping("/appointments/approved")
     public RestResult<?> getApprovedAppointments() {
-        Long currentTrainerId = SecurityUtils.getCurrentUserId();
-        if (currentTrainerId == null) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
+        Long trainerId = SecurityUtils.getCurrentUserId();
+        if (trainerId == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED,
+                    "User is not authenticated or session is invalid.");
         }
-        List<AppointmentBooking> approvedAppointments =
-                appointmentBookingService.getApprovedAppointmentsForTrainer(currentTrainerId);
-        return RestResult.success(approvedAppointments, "Approved appointments retrieved successfully.");
+        List<PendingAppointmentVO> approved =
+                appointmentBookingService.getApprovedAppointmentsForTrainerWithTimes(trainerId);
+        return RestResult.success(approved, "Approved appointments retrieved successfully.");
     }
 
     /**

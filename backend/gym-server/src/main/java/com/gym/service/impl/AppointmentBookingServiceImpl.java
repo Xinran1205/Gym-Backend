@@ -564,12 +564,47 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
 
 
     @Override
-    public List<AppointmentBooking> getApprovedAppointmentsForTrainer(Long trainerId) {
-        LambdaQueryWrapper<AppointmentBooking> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(AppointmentBooking::getTrainerId, trainerId)
+    public List<PendingAppointmentVO> getApprovedAppointmentsForTrainerWithTimes(Long trainerId) {
+        // 1. 查询所有 Approved 预约
+        LambdaQueryWrapper<AppointmentBooking> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(AppointmentBooking::getTrainerId, trainerId)
                 .eq(AppointmentBooking::getAppointmentStatus, AppointmentBooking.AppointmentStatus.Approved)
                 .orderByAsc(AppointmentBooking::getCreatedAt);
-        return this.list(queryWrapper);
+        List<AppointmentBooking> list = this.list(wrapper);
+
+        if (list.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 2. 收集所有 memberId 去重
+        LinkedHashSet<Long> memberIds = list.stream()
+                .map(AppointmentBooking::getMemberId)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        // 3. 批量拉取学员姓名
+        Map<Long, String> nameMap = userService.listByIds(new ArrayList<>(memberIds))
+                .stream()
+                .collect(Collectors.toMap(User::getUserID, User::getName));
+
+        // 4. 组装 VO
+        List<PendingAppointmentVO> result = new ArrayList<>();
+        for (AppointmentBooking b : list) {
+            // 查出对应的可用时段
+            TrainerAvailability slot = trainerAvailabilityService.getById(b.getAvailabilityId());
+            if (slot == null) continue;
+
+            result.add(PendingAppointmentVO.builder()
+                    .appointmentId(b.getAppointmentId())
+                    .memberId(b.getMemberId())
+                    .memberName(nameMap.getOrDefault(b.getMemberId(), "Unknown"))
+                    .projectName(b.getProjectName())
+                    .description(b.getDescription())
+                    .createdAt(b.getCreatedAt())
+                    .startTime(slot.getStartTime())
+                    .endTime(slot.getEndTime())
+                    .build());
+        }
+        return result;
     }
 
     @Override
