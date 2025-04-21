@@ -149,16 +149,18 @@ public class TrainerController {
 
 
     /**
-     * 教练查询待审核预约请求接口（仅返回状态为 Pending 且未过期的预约）
+     * 教练查询待审核预约请求接口（Pending 且未过期），返回课程开始/结束时间
      */
     @GetMapping("/appointments/pending")
     public RestResult<?> getPendingAppointments() {
-        Long currentTrainerId = SecurityUtils.getCurrentUserId();
-        if (currentTrainerId == null) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
+        Long trainerId = SecurityUtils.getCurrentUserId();
+        if (trainerId == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED,
+                    "User is not authenticated or session is invalid.");
         }
-        List<AppointmentBooking> pendingAppointments = appointmentBookingService.getPendingAppointmentsForTrainer(currentTrainerId);
-        return RestResult.success(pendingAppointments, "Pending appointments retrieved successfully.");
+        List<PendingAppointmentVO> pending =
+                appointmentBookingService.getPendingAppointmentsForTrainerWithTimes(trainerId);
+        return RestResult.success(pending, "Pending appointments retrieved successfully.");
     }
 
 

@@ -327,25 +327,51 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
 
     // 教练查询待审核预约请求接口（仅返回状态为 Pending 且未过期的预约）
     @Override
-    public List<AppointmentBooking> getPendingAppointmentsForTrainer(Long trainerId) {
-        LambdaQueryWrapper<AppointmentBooking> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(AppointmentBooking::getTrainerId, trainerId)
+    public List<PendingAppointmentVO> getPendingAppointmentsForTrainerWithTimes(Long trainerId) {
+        // 1. 查询 Pending 预约并做过期检查（同原逻辑）
+        LambdaQueryWrapper<AppointmentBooking> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(AppointmentBooking::getTrainerId, trainerId)
                 .eq(AppointmentBooking::getAppointmentStatus, AppointmentBooking.AppointmentStatus.Pending)
                 .orderByAsc(AppointmentBooking::getCreatedAt);
-        List<AppointmentBooking> list = this.list(queryWrapper);
-        // 逐条检查并更新已过期的记录
-        List<AppointmentBooking> validList = new ArrayList<>();
-        for (AppointmentBooking booking : list) {
+        List<AppointmentBooking> list = this.list(wrapper);
+
+        // 先筛选未过期的，并且收集所有 memberId
+        List<AppointmentBooking> valid = new ArrayList<>();
+        LinkedHashSet<Long> memberIds = new LinkedHashSet<>();
+        for (AppointmentBooking b : list) {
             try {
-                // 该方法内部会检查并抛出异常，如果过期
-                checkAndExpireIfNeeded(booking);
-                validList.add(booking);
+                checkAndExpireIfNeeded(b);
+                valid.add(b);
+                memberIds.add(b.getMemberId());
             } catch (CustomException e) {
-                // 记录已更新为 Expired，但不加入有效列表
-                log.info("Appointment [{}] expired.", booking.getAppointmentId());
+                log.info("Appointment [{}] expired.", b.getAppointmentId());
             }
         }
-        return validList;
+
+        // 2. 批量拉取学员信息
+        Map<Long, String> nameMap = userService.listByIds(new ArrayList<>(memberIds))
+                .stream()
+                .collect(Collectors.toMap(User::getUserID, User::getName));
+
+        // 3. 组装 VO 列表
+        List<PendingAppointmentVO> result = new ArrayList<>();
+        for (AppointmentBooking b : valid) {
+            // 取出时段
+            TrainerAvailability slot = trainerAvailabilityService.getById(b.getAvailabilityId());
+            if (slot == null) continue;
+
+            result.add(PendingAppointmentVO.builder()
+                    .appointmentId(b.getAppointmentId())
+                    .memberId(b.getMemberId())
+                    .memberName(nameMap.getOrDefault(b.getMemberId(), "Unknown"))
+                    .projectName(b.getProjectName())
+                    .description(b.getDescription())
+                    .createdAt(b.getCreatedAt())
+                    .startTime(slot.getStartTime())
+                    .endTime(slot.getEndTime())
+                    .build());
+        }
+        return result;
     }
 
     // 在审批之前，我们统一检查预约记录对应的可用时间是否已经过期

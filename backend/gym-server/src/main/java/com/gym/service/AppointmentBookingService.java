@@ -39,7 +39,11 @@ public interface AppointmentBookingService extends IService<AppointmentBooking> 
      */
     void rejectAppointment(AppointmentDecisionRejectDTO dto, Long trainerId);
 
-    List<AppointmentBooking> getPendingAppointmentsForTrainer(Long trainerId);
+    /**
+     * 教练查询待审核预约（Pending且未过期），包含课程时段
+     */
+    List<PendingAppointmentVO> getPendingAppointmentsForTrainerWithTimes(Long trainerId);
+
     /**
      * 分页查询当前会员未来预约的详细信息，
      * 默认返回状态为 Pending 和 Approved，如果传入 status 参数，则按照该状态过滤。
