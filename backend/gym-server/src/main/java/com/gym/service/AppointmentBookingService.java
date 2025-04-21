@@ -6,10 +6,7 @@ import com.gym.dto.AppointmentBookingDTO;
 import com.gym.dto.AppointmentDecisionDTO;
 import com.gym.dto.AppointmentDecisionRejectDTO;
 import com.gym.entity.AppointmentBooking;
-import com.gym.vo.AppointmentBookingDetailVO;
-import com.gym.vo.AppointmentBookingHistoryDetailVO;
-import com.gym.vo.DynamicAppointmentStatisticsVO;
-import com.gym.vo.MemberAppointmentsVO;
+import com.gym.vo.*;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -102,5 +99,10 @@ public interface AppointmentBookingService extends IService<AppointmentBooking> 
      * 教练查询自己的全部预约，并按学员分组
      */
     List<MemberAppointmentsVO> getAllAppointmentsGroupedByMember(Long trainerId);
+
+    /**
+     * 教练查询所有已完成（Completed）的预约
+     */
+    List<CompletedAppointmentVO> getCompletedAppointmentsForTrainer(Long trainerId);
 }
 

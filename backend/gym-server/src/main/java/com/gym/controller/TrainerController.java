@@ -305,4 +305,21 @@ public class TrainerController {
                 "Connected members retrieved successfully.");
     }
 
+    /**
+     * 教练查询所有已完成的预约（历史查询），包含学员姓名
+     * GET /trainer/appointments/completed
+     */
+    @GetMapping("/appointments/completed")
+    public RestResult<?> getCompletedAppointments() {
+        Long trainerId = SecurityUtils.getCurrentUserId();
+        if (trainerId == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED,
+                    "User is not authenticated or session is invalid.");
+        }
+        List<CompletedAppointmentVO> completed =
+                appointmentBookingService.getCompletedAppointmentsForTrainer(trainerId);
+        return RestResult.success(completed,
+                "Completed appointments retrieved successfully.");
+    }
+
 }

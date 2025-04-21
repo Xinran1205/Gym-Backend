@@ -13,6 +13,6 @@ import java.time.LocalDateTime;
 public class ConnectedMemberVO {
     private Long   memberId;
     private String memberName;
-    private String memberEmail;         // 新增：邮箱
-    private LocalDateTime connectTime;  // 新增：申请 connect 时的时间
+    private String memberEmail;         // new: member's email
+    private LocalDateTime connectTime;  // new: time when the member applied to connect
 }

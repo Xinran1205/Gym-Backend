@@ -612,5 +612,36 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
         return result;
     }
 
+    @Override
+    public List<CompletedAppointmentVO> getCompletedAppointmentsForTrainer(Long trainerId) {
+        // 1. 查询所有 Completed 的预约
+        LambdaQueryWrapper<AppointmentBooking> qw = new LambdaQueryWrapper<>();
+        qw.eq(AppointmentBooking::getTrainerId, trainerId)
+                .eq(AppointmentBooking::getAppointmentStatus, AppointmentBooking.AppointmentStatus.Completed)
+                .orderByAsc(AppointmentBooking::getCreatedAt);
+        List<AppointmentBooking> list = this.list(qw);
+        if (list.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // 2. 批量取学员信息
+        Set<Long> memberIds = list.stream()
+                .map(AppointmentBooking::getMemberId)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        Map<Long, String> nameMap = userService.listByIds(memberIds).stream()
+                .collect(Collectors.toMap(User::getUserID, User::getName));
+
+        // 3. 构造 VO
+        return list.stream()
+                .map(ab -> CompletedAppointmentVO.builder()
+                        .appointmentId(ab.getAppointmentId())
+                        .memberId(ab.getMemberId())
+                        .memberName(nameMap.getOrDefault(ab.getMemberId(), "Unknown"))
+                        .projectName(ab.getProjectName())
+                        .description(ab.getDescription())
+                        .createdAt(ab.getCreatedAt())
+                        .build())
+                .collect(Collectors.toList());
+    }
 }
 
