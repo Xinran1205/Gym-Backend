@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.gym.entity.User;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -186,32 +187,48 @@ public class TrainerConnectRequestServiceImpl extends ServiceImpl<TrainerConnect
 
     @Override
     public List<ConnectedMemberVO> listConnectedMembers(Long trainerId) {
-
-        // 1. 查出所有已 Accepted 的连接记录
+        // 1. 查出所有已 Accepted 的连接记录（包括 createdAt）
         LambdaQueryWrapper<TrainerConnectRequest> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(TrainerConnectRequest::getTrainerId, trainerId)
                 .eq(TrainerConnectRequest::getStatus, TrainerConnectRequest.RequestStatus.Accepted)
-                .select(TrainerConnectRequest::getMemberId);
+                .orderByAsc(TrainerConnectRequest::getCreatedAt);
         List<TrainerConnectRequest> accepted = this.list(wrapper);
         if (accepted.isEmpty()) {
             return new ArrayList<>();
         }
 
-        // 2. 去重并批量拉取会员姓名
-        Set<Long> memberIds = accepted.stream()
+        // 2. 去重并收集 memberId
+        LinkedHashSet<Long> memberIds = accepted.stream()
                 .map(TrainerConnectRequest::getMemberId)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
 
-        Map<Long, String> nameMap = userService.listByIds(memberIds).stream()
-                .collect(Collectors.toMap(User::getUserID, User::getName));
+        // 3. 批量拉取会员 User 实体
+        List<User> users = userService.listByIds(memberIds);
+        Map<Long, User> userMap = users.stream()
+                .collect(Collectors.toMap(User::getUserID, u -> u));
 
-        // 3. 组装返回 VO
-        return memberIds.stream()
-                .map(id -> ConnectedMemberVO.builder()
-                        .memberId(id)
-                        .memberName(nameMap.getOrDefault(id, "Unknown"))
-                        .build())
-                .collect(Collectors.toList());
+        // 4. 构造 VO 列表
+        List<ConnectedMemberVO> result = new ArrayList<>();
+        for (Long memberId : memberIds) {
+            User u = userMap.get(memberId);
+            String name  = (u != null ? u.getName() : "Unknown");
+            String email = (u != null ? u.getEmail() : null);
+            // 找到对应的 connect 记录拿到 time
+            LocalDateTime t = accepted.stream()
+                    .filter(r -> r.getMemberId().equals(memberId))
+                    .findFirst()
+                    .map(TrainerConnectRequest::getCreatedAt)
+                    .orElse(null);
+
+            result.add(ConnectedMemberVO.builder()
+                    .memberId(memberId)
+                    .memberName(name)
+                    .memberEmail(email)
+                    .connectTime(t)
+                    .build());
+        }
+        return result;
     }
+
 }
 
