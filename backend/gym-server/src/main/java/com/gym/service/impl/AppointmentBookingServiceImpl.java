@@ -328,27 +328,34 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
     // 教练查询待审核预约请求接口（仅返回状态为 Pending 且未过期的预约）
     @Override
     public List<PendingAppointmentVO> getPendingAppointmentsForTrainerWithTimes(Long trainerId) {
-        // 1. 查询 Pending 预约并做过期检查（同原逻辑）
+        // 1. 查询 Pending 预约并做过期检查
         LambdaQueryWrapper<AppointmentBooking> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(AppointmentBooking::getTrainerId, trainerId)
                 .eq(AppointmentBooking::getAppointmentStatus, AppointmentBooking.AppointmentStatus.Pending)
                 .orderByAsc(AppointmentBooking::getCreatedAt);
         List<AppointmentBooking> list = this.list(wrapper);
 
-        // 先筛选未过期的，并且收集所有 memberId
+        // 先筛选未过期的
         List<AppointmentBooking> valid = new ArrayList<>();
-        LinkedHashSet<Long> memberIds = new LinkedHashSet<>();
         for (AppointmentBooking b : list) {
             try {
                 checkAndExpireIfNeeded(b);
                 valid.add(b);
-                memberIds.add(b.getMemberId());
             } catch (CustomException e) {
                 log.info("Appointment [{}] expired.", b.getAppointmentId());
             }
         }
+        // 如果没有有效记录，直接返回空列表
+        if (valid.isEmpty()) {
+            return Collections.emptyList();
+        }
 
-        // 2. 批量拉取学员信息
+        // 收集所有 memberId，去重并保持顺序
+        LinkedHashSet<Long> memberIds = valid.stream()
+                .map(AppointmentBooking::getMemberId)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        // 2. 批量拉取学员信息（此时 memberIds 一定非空）
         Map<Long, String> nameMap = userService.listByIds(new ArrayList<>(memberIds))
                 .stream()
                 .collect(Collectors.toMap(User::getUserID, User::getName));
@@ -356,10 +363,11 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
         // 3. 组装 VO 列表
         List<PendingAppointmentVO> result = new ArrayList<>();
         for (AppointmentBooking b : valid) {
-            // 取出时段
             TrainerAvailability slot = trainerAvailabilityService.getById(b.getAvailabilityId());
-            if (slot == null) continue;
-
+            if (slot == null) {
+                // 如果时段数据异常，可以跳过
+                continue;
+            }
             result.add(PendingAppointmentVO.builder()
                     .appointmentId(b.getAppointmentId())
                     .memberId(b.getMemberId())
