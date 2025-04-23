@@ -39,10 +39,10 @@ public class AppointmentBooking implements Serializable {
     private AppointmentStatus appointmentStatus; // Pending, Approved, Rejected, Cancelled, Completed
 
     @TableField(value = "created_at", fill = FieldFill.INSERT)
-    private LocalDateTime createdAt;
+    private LocalDateTime createTime;
 
     @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updatedAt;
+    private LocalDateTime updateTime;
 
     public enum AppointmentStatus {
         Pending, Approved, Rejected, Cancelled, Completed, Expired

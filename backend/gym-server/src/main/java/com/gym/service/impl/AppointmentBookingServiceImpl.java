@@ -332,7 +332,7 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
         LambdaQueryWrapper<AppointmentBooking> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(AppointmentBooking::getTrainerId, trainerId)
                 .eq(AppointmentBooking::getAppointmentStatus, AppointmentBooking.AppointmentStatus.Pending)
-                .orderByAsc(AppointmentBooking::getCreatedAt);
+                .orderByAsc(AppointmentBooking::getCreateTime);
         List<AppointmentBooking> list = this.list(wrapper);
 
         // 先筛选未过期的
@@ -374,7 +374,7 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
                     .memberName(nameMap.getOrDefault(b.getMemberId(), "Unknown"))
                     .projectName(b.getProjectName())
                     .description(b.getDescription())
-                    .createdAt(b.getCreatedAt())
+                    .createdAt(b.getCreateTime())
                     .startTime(slot.getStartTime())
                     .endTime(slot.getEndTime())
                     .build());
@@ -569,7 +569,7 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
         LambdaQueryWrapper<AppointmentBooking> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(AppointmentBooking::getTrainerId, trainerId)
                 .eq(AppointmentBooking::getAppointmentStatus, AppointmentBooking.AppointmentStatus.Approved)
-                .orderByAsc(AppointmentBooking::getCreatedAt);
+                .orderByAsc(AppointmentBooking::getCreateTime);
         List<AppointmentBooking> list = this.list(wrapper);
 
         if (list.isEmpty()) {
@@ -599,7 +599,7 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
                     .memberName(nameMap.getOrDefault(b.getMemberId(), "Unknown"))
                     .projectName(b.getProjectName())
                     .description(b.getDescription())
-                    .createdAt(b.getCreatedAt())
+                    .createdAt(b.getCreateTime())
                     .startTime(slot.getStartTime())
                     .endTime(slot.getEndTime())
                     .build());
@@ -653,33 +653,63 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
 
     @Override
     public List<MemberAppointmentsVO> getAllAppointmentsGroupedByMember(Long trainerId) {
-
-        // 1. 拉取该教练所有预约，先按 memberId、createdAt 排序
+        // 1. 拉取该教练所有预约，按 memberId、createdAt 排序
         LambdaQueryWrapper<AppointmentBooking> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(AppointmentBooking::getTrainerId, trainerId)
                 .orderByAsc(AppointmentBooking::getMemberId)
-                .orderByAsc(AppointmentBooking::getCreatedAt);
+                .orderByAsc(AppointmentBooking::getCreateTime);
         List<AppointmentBooking> all = this.list(wrapper);
         if (all.isEmpty()) {
-            return new ArrayList<>();
+            return Collections.emptyList();
         }
 
-        // 2. 按 memberId 分组
-        Map<Long, List<AppointmentBooking>> grouped =
-                all.stream().collect(Collectors.groupingBy(AppointmentBooking::getMemberId,
-                        LinkedHashMap::new, Collectors.toList()));
+        // 2. 按 memberId 分组（LinkedHashMap 保持插入顺序）
+        Map<Long, List<AppointmentBooking>> grouped = all.stream()
+                .collect(Collectors.groupingBy(
+                        AppointmentBooking::getMemberId,
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
 
-        // 3. 构造 VO 列表（按插入顺序，即 memberId 升序）
+        // 3. 批量拉取所有 member 的姓名
+        Set<Long> memberIds = grouped.keySet();
+        Map<Long, String> nameMap = userService.listByIds(new ArrayList<>(memberIds))
+                .stream()
+                .collect(Collectors.toMap(User::getUserID, User::getName));
+
+        // 4. 构造 VO 列表
         List<MemberAppointmentsVO> result = new ArrayList<>();
         for (Map.Entry<Long, List<AppointmentBooking>> entry : grouped.entrySet()) {
             Long memberId = entry.getKey();
-            String name   = Optional.ofNullable(userService.getUserById(memberId))
-                    .map(User::getName).orElse("Unknown");
+            String memberName = nameMap.getOrDefault(memberId, "Unknown");
+
+            // 把每个 AppointmentBooking 转换成 AppointmentWithTimeVO
+            List<AppointmentWithTimeVO> voList = entry.getValue().stream().map(b -> {
+                // 查对应的时段
+                TrainerAvailability slot = trainerAvailabilityService.getById(b.getAvailabilityId());
+                if (slot == null) {
+                    throw new CustomException(
+                            ErrorCode.BAD_REQUEST,
+                            "TrainerAvailability not found for id " + b.getAvailabilityId()
+                    );
+                }
+                return AppointmentWithTimeVO.builder()
+                        .appointmentId(b.getAppointmentId())
+                        .projectName(b.getProjectName())
+                        .description(b.getDescription())
+                        .appointmentStatus(b.getAppointmentStatus().name())
+                        .createdAt(b.getCreateTime())
+                        .startTime(slot.getStartTime())
+                        .endTime(slot.getEndTime())
+                        .build();
+            }).collect(Collectors.toList());
+
             result.add(MemberAppointmentsVO.builder()
                     .memberId(memberId)
-                    .memberName(name)
-                    .appointments(entry.getValue())
-                    .build());
+                    .memberName(memberName)
+                    .appointments(voList)
+                    .build()
+            );
         }
         return result;
     }
@@ -690,7 +720,7 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
         LambdaQueryWrapper<AppointmentBooking> qw = new LambdaQueryWrapper<>();
         qw.eq(AppointmentBooking::getTrainerId, trainerId)
                 .eq(AppointmentBooking::getAppointmentStatus, AppointmentBooking.AppointmentStatus.Completed)
-                .orderByAsc(AppointmentBooking::getCreatedAt);
+                .orderByAsc(AppointmentBooking::getCreateTime);
         List<AppointmentBooking> list = this.list(qw);
         if (list.isEmpty()) {
             return new ArrayList<>();
@@ -711,7 +741,7 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
                         .memberName(nameMap.getOrDefault(ab.getMemberId(), "Unknown"))
                         .projectName(ab.getProjectName())
                         .description(ab.getDescription())
-                        .createdAt(ab.getCreatedAt())
+                        .createdAt(ab.getCreateTime())
                         .build())
                 .collect(Collectors.toList());
     }

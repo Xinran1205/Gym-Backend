@@ -14,7 +14,7 @@ import java.util.List;
 @Builder
 @ToString
 public class MemberAppointmentsVO {
-    private Long   memberId;
+    private Long memberId;
     private String memberName;
-    private List<AppointmentBooking> appointments;
+    private List<AppointmentWithTimeVO> appointments;  // 使用新 VO
 }

@@ -33,10 +33,10 @@ public class TrainerConnectRequest implements Serializable {
     private String responseMessage;
 
     @TableField(value = "created_at", fill = FieldFill.INSERT)
-    private LocalDateTime createdAt;
+    private LocalDateTime createTime;
 
     @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updatedAt;
+    private LocalDateTime updateTime;
 
     public enum RequestStatus {
         Pending, Accepted, Rejected, NONE

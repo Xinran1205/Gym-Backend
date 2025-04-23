@@ -29,7 +29,7 @@ public class NotificationServiceImpl extends ServiceImpl<NotificationDao, Notifi
     public Page<Notification> getNotificationsByUser(Long userId, int page, int pageSize) {
         LambdaQueryWrapper<Notification> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Notification::getUserId, userId)
-                .orderByDesc(Notification::getCreatedAt);
+                .orderByDesc(Notification::getCreateTime);
         return this.page(new Page<>(page, pageSize), queryWrapper);
     }
 

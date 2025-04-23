@@ -33,10 +33,10 @@ public class Notification implements Serializable {
     private Boolean isRead; // 是否已读
 
     @TableField(value = "created_at", fill = FieldFill.INSERT)
-    private LocalDateTime createdAt;
+    private LocalDateTime createTime;
 
     @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updatedAt;
+    private LocalDateTime updateTime;
 
     public enum NotificationType {
         INFO, ALERT, SYSTEM

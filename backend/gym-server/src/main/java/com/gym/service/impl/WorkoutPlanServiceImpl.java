@@ -48,7 +48,7 @@ public class WorkoutPlanServiceImpl extends ServiceImpl<WorkoutPlanDao, WorkoutP
     @Override
     public List<WorkoutPlan> listPlans(Long trainerId) {
         return lambdaQuery().eq(WorkoutPlan::getTrainerId, trainerId)
-                .orderByDesc(WorkoutPlan::getCreatedAt)
+                .orderByDesc(WorkoutPlan::getCreateTime)
                 .list();
     }
 }

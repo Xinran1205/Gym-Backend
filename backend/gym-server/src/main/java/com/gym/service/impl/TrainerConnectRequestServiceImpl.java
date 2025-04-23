@@ -158,7 +158,7 @@ public class TrainerConnectRequestServiceImpl extends ServiceImpl<TrainerConnect
         LambdaQueryWrapper<TrainerConnectRequest> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(TrainerConnectRequest::getTrainerId, trainerId)
                 .eq(TrainerConnectRequest::getStatus, TrainerConnectRequest.RequestStatus.Pending)
-                .orderByAsc(TrainerConnectRequest::getCreatedAt);
+                .orderByAsc(TrainerConnectRequest::getCreateTime);
 
         List<TrainerConnectRequest> requests = this.list(wrapper);
         if (requests.isEmpty()) {
@@ -180,7 +180,7 @@ public class TrainerConnectRequestServiceImpl extends ServiceImpl<TrainerConnect
                         .memberId(r.getMemberId())
                         .memberName(nameMap.getOrDefault(r.getMemberId(), "Unknown"))
                         .requestMessage(r.getRequestMessage())
-                        .createdAt(r.getCreatedAt())
+                        .createdAt(r.getCreateTime())
                         .build())
                 .collect(Collectors.toList());
     }
@@ -191,7 +191,7 @@ public class TrainerConnectRequestServiceImpl extends ServiceImpl<TrainerConnect
         LambdaQueryWrapper<TrainerConnectRequest> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(TrainerConnectRequest::getTrainerId, trainerId)
                 .eq(TrainerConnectRequest::getStatus, TrainerConnectRequest.RequestStatus.Accepted)
-                .orderByAsc(TrainerConnectRequest::getCreatedAt);
+                .orderByAsc(TrainerConnectRequest::getCreateTime);
         List<TrainerConnectRequest> accepted = this.list(wrapper);
         if (accepted.isEmpty()) {
             return new ArrayList<>();
@@ -217,7 +217,7 @@ public class TrainerConnectRequestServiceImpl extends ServiceImpl<TrainerConnect
             LocalDateTime t = accepted.stream()
                     .filter(r -> r.getMemberId().equals(memberId))
                     .findFirst()
-                    .map(TrainerConnectRequest::getCreatedAt)
+                    .map(TrainerConnectRequest::getCreateTime)
                     .orElse(null);
 
             result.add(ConnectedMemberVO.builder()

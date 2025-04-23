@@ -100,7 +100,7 @@ public interface AppointmentBookingService extends IService<AppointmentBooking> 
     void completeAppointment(Long appointmentId, Long trainerId);
 
     /**
-     * 教练查询自己的全部预约，并按学员分组
+     * 教练查询自己的全部预约，并按学员分组，包含每条预约的开始/结束时间
      */
     List<MemberAppointmentsVO> getAllAppointmentsGroupedByMember(Long trainerId);
 

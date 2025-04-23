@@ -30,10 +30,10 @@ public class TrainerAvailability implements Serializable {
     private AvailabilityStatus status; // Available, Booked, Unavailable
 
     @TableField(value = "created_at", fill = FieldFill.INSERT)
-    private LocalDateTime createdAt;
+    private LocalDateTime createTime;
 
     @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updatedAt;
+    private LocalDateTime updateTime;
 
     // 这里感觉不需要unavailable
     public enum AvailabilityStatus {
