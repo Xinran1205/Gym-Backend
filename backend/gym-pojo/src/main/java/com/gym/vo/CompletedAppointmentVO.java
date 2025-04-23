@@ -18,4 +18,6 @@ public class CompletedAppointmentVO {
     private String projectName;
     private String description;
     private LocalDateTime createdAt;
+    private LocalDateTime startTime;  // 新增
+    private LocalDateTime endTime;    // 新增
 }

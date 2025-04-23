@@ -730,20 +730,29 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
         Set<Long> memberIds = list.stream()
                 .map(AppointmentBooking::getMemberId)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
-        Map<Long, String> nameMap = userService.listByIds(memberIds).stream()
+        Map<Long, String> nameMap = userService.listByIds(new ArrayList<>(memberIds)).stream()
                 .collect(Collectors.toMap(User::getUserID, User::getName));
 
-        // 3. 构造 VO
-        return list.stream()
-                .map(ab -> CompletedAppointmentVO.builder()
-                        .appointmentId(ab.getAppointmentId())
-                        .memberId(ab.getMemberId())
-                        .memberName(nameMap.getOrDefault(ab.getMemberId(), "Unknown"))
-                        .projectName(ab.getProjectName())
-                        .description(ab.getDescription())
-                        .createdAt(ab.getCreateTime())
-                        .build())
-                .collect(Collectors.toList());
+        // 3. 构造 VO 列表
+        List<CompletedAppointmentVO> result = new ArrayList<>();
+        for (AppointmentBooking ab : list) {
+            // 3.1 拿到对应的时间段
+            TrainerAvailability slot = trainerAvailabilityService.getById(ab.getAvailabilityId());
+            if (slot == null) {
+                continue; // 若丢失数据则跳过
+            }
+            result.add(CompletedAppointmentVO.builder()
+                    .appointmentId(ab.getAppointmentId())
+                    .memberId(ab.getMemberId())
+                    .memberName(nameMap.getOrDefault(ab.getMemberId(), "Unknown"))
+                    .projectName(ab.getProjectName())
+                    .description(ab.getDescription())
+                    .createdAt(ab.getCreateTime())
+                    .startTime(slot.getStartTime())  // 填充开始时间
+                    .endTime(slot.getEndTime())      // 填充结束时间
+                    .build());
+        }
+        return result;
     }
 
     @Override
