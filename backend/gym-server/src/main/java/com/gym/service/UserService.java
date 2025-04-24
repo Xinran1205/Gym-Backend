@@ -43,5 +43,15 @@ public interface UserService extends IService<User> {
      * @return paged result with pending users
      */
     Page<User> getPendingUsers(Page<User> page);
+
+    /**
+     * 条件分页查询用户（仅 member 和 trainer），role 可选：member/trainer，不传则查询两者
+     *
+     * @param page     页码（从 1 开始）
+     * @param pageSize 每页记录数
+     * @param role     可选，"member" 或 "trainer"
+     * @return 分页结果
+     */
+    Page<User> listUsers(int page, int pageSize, String role);
 }
 

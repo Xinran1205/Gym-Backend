@@ -209,4 +209,18 @@ public class AdminController {
         return RestResult.success(null, "Fitness centre deleted successfully.");
     }
 
+    /**
+     * 条件分页查询所有 member 或 trainer 用户
+     *
+     * GET /admin/users?role={member|trainer}&page=1&pageSize=10
+     */
+    @GetMapping("/users")
+    public RestResult<Page<User>> listUsers(
+            @RequestParam(value = "role", required = false) String role,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize) {
+
+        Page<User> result = userService.listUsers(page, pageSize, role);
+        return RestResult.success(result, "Users retrieved successfully.");
+    }
 }

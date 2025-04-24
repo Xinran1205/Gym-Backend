@@ -1,5 +1,6 @@
 package com.gym.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -192,5 +193,32 @@ public class UserServiceImpl extends ServiceImpl<UserDao, User> implements UserS
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("email", email);
         return baseMapper.selectOne(queryWrapper);
+    }
+
+    @Override
+    public Page<User> listUsers(int page, int pageSize, String role) {
+        LambdaQueryWrapper<User> qw = new LambdaQueryWrapper<>();
+
+        if (role != null) {
+            try {
+                User.Role r = User.Role.valueOf(role);
+                if (r == User.Role.admin) {
+                    throw new IllegalArgumentException("Cannot query admin here");
+                }
+                qw.eq(User::getRole, r);
+            } catch (IllegalArgumentException ex) {
+                throw new CustomException(ErrorCode.BAD_REQUEST,
+                        "Invalid role parameter: must be 'member' or 'trainer'");
+            }
+        } else {
+            // 默认查询 member + trainer
+            qw.in(User::getRole, User.Role.member, User.Role.trainer);
+        }
+
+        // 按创建时间升序
+        qw.orderByAsc(User::getCreateTime);
+
+        Page<User> pageObj = new Page<>(page, pageSize);
+        return this.page(pageObj, qw);
     }
 }
