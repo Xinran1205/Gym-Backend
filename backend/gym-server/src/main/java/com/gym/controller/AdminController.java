@@ -16,6 +16,7 @@ import com.gym.result.RestResult;
 import com.gym.service.FitnessCentreService;
 import com.gym.service.SpecializationsService;
 import com.gym.service.UserService;
+import com.gym.util.SecurityUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -40,6 +41,24 @@ public class AdminController {
 
     @Autowired
     private FitnessCentreService fitnessCentreService;  // 新增
+
+    /**
+     * 获取当前登录管理员的个人信息
+     * GET /admin/profile
+     */
+    @GetMapping("/profile")
+    public RestResult<User> getAdminProfile() {
+        Long adminId = SecurityUtils.getCurrentUserId();
+        if (adminId == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED,
+                    "User is not authenticated or session is invalid.");
+        }
+        User admin = userService.getUserById(adminId);
+        if (admin == null) {
+            throw new CustomException(ErrorCode.NOT_FOUND, "Admin user not found.");
+        }
+        return RestResult.success(admin, "Admin profile retrieved successfully.");
+    }
 
     /**
      * Approve user application
