@@ -1,7 +1,9 @@
 package com.gym.entity;
 
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.*;
 
@@ -13,7 +15,8 @@ import lombok.*;
 @ToString
 @TableName("specializations")
 public class Specializations {
-    @TableField("specialization_id")
+    @TableId(value = "specialization_id", type = IdType.AUTO)
+//    @TableField("specialization_id")
     private Long specializationId;
 
     @TableField("description")
