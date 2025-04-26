@@ -18,4 +18,8 @@ public class AppointmentBookingDetailVO {
     private LocalDateTime sessionStartTime; // 对应可用时间开始时间
     private LocalDateTime sessionEndTime;   // 对应可用时间结束时间
     private String trainerName;             // 从用户表中查出的教练名称
+
+    // ★ 新增：若该预约已绑定健身计划，则返回标题与内容；否则为 null
+    private String         workoutPlanTitle;
+    private String         workoutPlanContent;
 }

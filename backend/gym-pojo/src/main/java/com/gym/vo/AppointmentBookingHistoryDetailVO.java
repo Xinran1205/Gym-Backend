@@ -23,4 +23,8 @@ public class AppointmentBookingHistoryDetailVO {
     private Long alternativeTrainerId;
     // 替代教练的姓名
     private String alternativeTrainerName;
+
+    // ★ 新增
+    private String         workoutPlanTitle;
+    private String         workoutPlanContent;
 }

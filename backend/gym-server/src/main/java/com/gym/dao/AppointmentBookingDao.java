@@ -17,54 +17,68 @@ import java.util.List;
 @Mapper
 public interface AppointmentBookingDao extends BaseMapper<AppointmentBooking> {
 
-    @Select("<script>" +
-            "SELECT ab.appointment_id, ab.project_name, ab.description, " +
-            "       ab.appointment_status, ab.created_at AS bookingCreatedAt, " +
-            "       ta.start_time AS sessionStartTime, ta.end_time AS sessionEndTime, " +
-            "       u.name AS trainerName " +
-            "FROM appointment_bookings ab " +
-            "JOIN trainer_availability ta ON ab.availability_id = ta.availability_id " +
-            "JOIN users u ON ab.trainer_id = u.user_id " +
-            "WHERE ab.member_id = #{memberId} " +
-            "AND ta.start_time &gt; NOW() " +
-            " <choose> " +
-            "   <when test='status != null and status != \"\"'> " +
-            "       AND ab.appointment_status = #{status} " +
-            "   </when> " +
-            "   <otherwise> " +
-            "       AND ab.appointment_status IN ('Pending','Approved') " +
-            "   </otherwise> " +
-            " </choose> " +
-            "ORDER BY ta.start_time" +
-            "</script>")
-    Page<AppointmentBookingDetailVO> selectUpcomingAppointmentsByMember(Page<?> page,
-                                                                        @Param("memberId") Long memberId,
-                                                                        @Param("status") String status);
-    @Select("<script>" +
-            "SELECT ab.appointment_id, ab.project_name, ab.description, " +
-            "       ab.appointment_status, ab.created_at AS bookingCreatedAt, " +
-            "       ta.start_time AS sessionStartTime, ta.end_time AS sessionEndTime, " +
-            "       u.name AS trainerName, " +
-            "       alt.alternative_trainer_id AS alternativeTrainerId, " +
-            "       alt.alternative_trainer_name AS alternativeTrainerName " +
-            "FROM appointment_bookings ab " +
-            "JOIN trainer_availability ta ON ab.availability_id = ta.availability_id " +
-            "JOIN users u ON ab.trainer_id = u.user_id " +
-            "LEFT JOIN appointment_alternative_trainer alt ON ab.appointment_id = alt.appointment_id " +
-            "WHERE ab.member_id = #{memberId} " +
-            " <choose> " +
-            "   <when test='status != null and status != \"\"'> " +
-            "       AND ab.appointment_status = #{status} " +
-            "   </when> " +
-            "   <otherwise> " +
-            "       AND ab.appointment_status NOT IN ('Pending','Approved') " +
-            "   </otherwise> " +
-            " </choose> " +
-            "ORDER BY ab.updated_at DESC" +
-            "</script>")
-    Page<AppointmentBookingHistoryDetailVO> selectHistoricalAppointmentsByMember(Page<?> page,
-                                                                                 @Param("memberId") Long memberId,
-                                                                                 @Param("status") String status);
+    // ① 未来预约（up-coming）
+    @Select("<script>"
+            + "SELECT ab.appointment_id, ab.project_name, ab.description, "
+            + "       ab.appointment_status, ab.created_at AS bookingCreatedAt, "
+            + "       ta.start_time  AS sessionStartTime, "
+            + "       ta.end_time    AS sessionEndTime, "
+            + "       u.name         AS trainerName, "
+            + "       wp.title       AS workoutPlanTitle,  "   /* ★ */
+            + "       wp.content     AS workoutPlanContent "   /* ★ */
+            + "FROM appointment_bookings ab "
+            + "JOIN trainer_availability ta ON ab.availability_id = ta.availability_id "
+            + "JOIN users u                 ON ab.trainer_id      = u.user_id "
+            + "LEFT JOIN workout_plans wp   ON ab.workout_plan_id = wp.plan_id "
+            + "WHERE ab.member_id = #{memberId} "
+            + "AND ta.start_time &gt; NOW() "
+            + "<choose>"
+            + "  <when test='status != null and status != \"\"'> "
+            + "       AND ab.appointment_status = #{status} "
+            + "  </when>"
+            + "  <otherwise>"
+            + "       AND ab.appointment_status IN ('Pending','Approved') "
+            + "  </otherwise>"
+            + "</choose>"
+            + "ORDER BY ta.start_time"
+            + "</script>")
+    Page<AppointmentBookingDetailVO> selectUpcomingAppointmentsByMember(
+            Page<?> page,
+            @Param("memberId") Long memberId,
+            @Param("status")   String status);
+
+    // ② 历史预约（history）
+    @Select("<script>"
+            + "SELECT ab.appointment_id, ab.project_name, ab.description, "
+            + "       ab.appointment_status, ab.created_at AS bookingCreatedAt, "
+            + "       ta.start_time  AS sessionStartTime, "
+            + "       ta.end_time    AS sessionEndTime, "
+            + "       u.name         AS trainerName, "
+            + "       alt.alternative_trainer_id   AS alternativeTrainerId, "
+            + "       alt.alternative_trainer_name AS alternativeTrainerName, "
+            + "       wp.title       AS workoutPlanTitle,  "   /* ★ */
+            + "       wp.content     AS workoutPlanContent "   /* ★ */
+            + "FROM appointment_bookings ab "
+            + "JOIN trainer_availability ta        ON ab.availability_id   = ta.availability_id "
+            + "JOIN users u                        ON ab.trainer_id        = u.user_id "
+            + "LEFT JOIN appointment_alternative_trainer alt "
+            + "                                     ON ab.appointment_id    = alt.appointment_id "
+            + "LEFT JOIN workout_plans wp          ON ab.workout_plan_id    = wp.plan_id "
+            + "WHERE ab.member_id = #{memberId} "
+            + "<choose>"
+            + "  <when test='status != null and status != \"\"'> "
+            + "       AND ab.appointment_status = #{status} "
+            + "  </when>"
+            + "  <otherwise>"
+            + "       AND ab.appointment_status NOT IN ('Pending','Approved') "
+            + "  </otherwise>"
+            + "</choose>"
+            + "ORDER BY ab.updated_at DESC"
+            + "</script>")
+    Page<AppointmentBookingHistoryDetailVO> selectHistoricalAppointmentsByMember(
+            Page<?> page,
+            @Param("memberId") Long memberId,
+            @Param("status")   String status);
 
 
     @Select("<script>" +
