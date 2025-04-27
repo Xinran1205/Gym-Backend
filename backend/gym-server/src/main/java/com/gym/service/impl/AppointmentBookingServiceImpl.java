@@ -566,32 +566,42 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
     @Override
     public List<PendingAppointmentVO> getApprovedAppointmentsForTrainerWithTimes(Long trainerId) {
         // 1. 查询所有 Approved 预约
-        LambdaQueryWrapper<AppointmentBooking> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(AppointmentBooking::getTrainerId, trainerId)
+        List<AppointmentBooking> list = this.list(new LambdaQueryWrapper<AppointmentBooking>()
+                .eq(AppointmentBooking::getTrainerId, trainerId)
                 .eq(AppointmentBooking::getAppointmentStatus, AppointmentBooking.AppointmentStatus.Approved)
-                .orderByAsc(AppointmentBooking::getCreateTime);
-        List<AppointmentBooking> list = this.list(wrapper);
-
+                .orderByAsc(AppointmentBooking::getCreateTime)
+        );
         if (list.isEmpty()) {
             return Collections.emptyList();
         }
 
-        // 2. 收集所有 memberId 去重
+        // 2. 批量拉取 memberName
         LinkedHashSet<Long> memberIds = list.stream()
                 .map(AppointmentBooking::getMemberId)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
-
-        // 3. 批量拉取学员姓名
         Map<Long, String> nameMap = userService.listByIds(new ArrayList<>(memberIds))
                 .stream()
                 .collect(Collectors.toMap(User::getUserID, User::getName));
 
+        // 3. 批量拉取 WorkoutPlan（可为空）
+        Set<Long> planIds = list.stream()
+                .map(AppointmentBooking::getWorkoutPlanId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, WorkoutPlan> planMap = planIds.isEmpty()
+                ? Collections.emptyMap()
+                : workoutPlanService.listByIds(new ArrayList<>(planIds))
+                .stream().collect(Collectors.toMap(WorkoutPlan::getPlanId, p -> p));
+
         // 4. 组装 VO
         List<PendingAppointmentVO> result = new ArrayList<>();
         for (AppointmentBooking b : list) {
-            // 查出对应的可用时段
             TrainerAvailability slot = trainerAvailabilityService.getById(b.getAvailabilityId());
             if (slot == null) continue;
+
+            WorkoutPlan plan = b.getWorkoutPlanId() == null
+                    ? null
+                    : planMap.get(b.getWorkoutPlanId());
 
             result.add(PendingAppointmentVO.builder()
                     .appointmentId(b.getAppointmentId())
@@ -602,6 +612,9 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
                     .createdAt(b.getCreateTime())
                     .startTime(slot.getStartTime())
                     .endTime(slot.getEndTime())
+                    // workoutPlan 相关
+                    .workoutPlanTitle(plan != null ? plan.getTitle() : null)
+                    .workoutPlanContent(plan != null ? plan.getContent() : null)
                     .build());
         }
         return result;

@@ -19,4 +19,8 @@ public class PendingAppointmentVO {
     private LocalDateTime createdAt;
     private LocalDateTime startTime;  // 课程开始
     private LocalDateTime endTime;    // 课程结束
+
+    // 新增：绑定的 WorkoutPlan 信息（如果有）
+    private String workoutPlanTitle;
+    private String workoutPlanContent;
 }
