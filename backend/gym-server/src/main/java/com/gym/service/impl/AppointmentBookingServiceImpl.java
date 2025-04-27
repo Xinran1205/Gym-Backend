@@ -599,9 +599,7 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
             TrainerAvailability slot = trainerAvailabilityService.getById(b.getAvailabilityId());
             if (slot == null) continue;
 
-            WorkoutPlan plan = b.getWorkoutPlanId() == null
-                    ? null
-                    : planMap.get(b.getWorkoutPlanId());
+            WorkoutPlan plan = (b.getWorkoutPlanId() != null ? planMap.get(b.getWorkoutPlanId()) : null);
 
             result.add(PendingAppointmentVO.builder()
                     .appointmentId(b.getAppointmentId())
@@ -612,7 +610,8 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
                     .createdAt(b.getCreateTime())
                     .startTime(slot.getStartTime())
                     .endTime(slot.getEndTime())
-                    // workoutPlan 相关
+                    // workoutPlanId
+                    .workoutPlanId(b.getWorkoutPlanId())
                     .workoutPlanTitle(plan != null ? plan.getTitle() : null)
                     .workoutPlanContent(plan != null ? plan.getContent() : null)
                     .build());
