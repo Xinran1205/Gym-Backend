@@ -2,11 +2,14 @@ package com.gym.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.gym.dao.AppointmentBookingDao;
 import com.gym.dao.TrainerAvailabilityDao;
 import com.gym.dto.AvailabilitySlotDTO;
+import com.gym.entity.AppointmentBooking;
 import com.gym.entity.TrainerAvailability;
 import com.gym.service.TrainerAvailabilityService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,63 +22,58 @@ import java.util.stream.Collectors;
 public class TrainerAvailabilityServiceImpl extends ServiceImpl<TrainerAvailabilityDao, TrainerAvailability>
         implements TrainerAvailabilityService {
 
+    /** 老师一次最多维护未来 7 天 */
+    private static final int RANGE_DAYS = 7;
+
     @Override
     @Transactional
-    public void updateAvailability(Long tutorId, List<AvailabilitySlotDTO> newSlots) {
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime limit = now.plusDays(7);
+    public void updateAvailability(Long trainerId, List<AvailabilitySlotDTO> frontList) {
 
-        // 1. 过滤并校验前端数据
-        List<AvailabilitySlotDTO> valid = newSlots.stream()
-                .filter(s -> !s.getStartTime().isBefore(now)
-                        && !s.getEndTime().isAfter(limit)
-                        && s.getEndTime().isAfter(s.getStartTime()))
+        LocalDateTime   now   = LocalDateTime.now();
+        LocalDateTime   limit = now.plusDays(RANGE_DAYS);
+
+        /* ---------- 1. 过滤非法时间段 ---------- */
+        List<AvailabilitySlotDTO> valid = frontList.stream()
+                .filter(s -> s.getStartTime() != null && s.getEndTime() != null)
+                .filter(s -> !s.getStartTime().isBefore(now)           // 必须 ≥ 当前
+                        && !s.getEndTime().isAfter(limit)            // 必须 ≤ 7 天后
+                        &&  s.getEndTime().isAfter(s.getStartTime()))// 结束 > 开始
                 .collect(Collectors.toList());
 
-        // 2. 查询数据库内已有时段
-        List<TrainerAvailability> existing = lambdaQuery()
-                .eq(TrainerAvailability::getTrainerId, tutorId)
-                .ge(TrainerAvailability::getStartTime, now)
-                .le(TrainerAvailability::getEndTime, limit)
-                .list();
-
-        // 3. 用 start_end 作为 key 建 map
-        Map<String, TrainerAvailability> existMap = existing.stream()
-                .collect(Collectors.toMap(
-                        v -> v.getStartTime() + "_" + v.getEndTime(),
-                        v -> v
-                ));
-
-        // 4. 新增：对每个前端传来的时段，如果在已有记录中不存在，则新增
-        List<TrainerAvailability> toInsert = valid.stream()
-                .filter(v -> !existMap.containsKey(v.getStartTime() + "_" + v.getEndTime()))
-                .map(v -> TrainerAvailability.builder()
-                        .trainerId(tutorId)
-                        .startTime(v.getStartTime())
-                        .endTime(v.getEndTime())
-                        .status(TrainerAvailability.AvailabilityStatus.Available)
-                        .build())
-                .collect(Collectors.toList());
-        if (!toInsert.isEmpty()) {
-            this.saveBatch(toInsert);
+        if (valid.isEmpty()) {
+            log.info("Trainer[{}] availability update skipped – no valid slot.", trainerId);
+            return;
         }
 
-        // 5. 删除：对数据库中存在但前端未传的时段，且状态是 Available（未被预约）的，删除它们
-        Set<String> newKeys = valid.stream()
+        /* ---------- 2. 查询当前 7 天内已存在的 slot ---------- */
+        List<TrainerAvailability> dbSlots = lambdaQuery()
+                .eq(TrainerAvailability::getTrainerId, trainerId)
+                .ge(TrainerAvailability::getStartTime, now)
+                .le(TrainerAvailability::getEndTime,   limit)
+                .list();
+
+        // 用 “start_end” 当唯一键，避免重复插入
+        Set<String> dbKeys = dbSlots.stream()
                 .map(v -> v.getStartTime() + "_" + v.getEndTime())
                 .collect(Collectors.toSet());
 
-        List<Long> toDelete = existing.stream()
-                .filter(v -> {
-                    String key = v.getStartTime() + "_" + v.getEndTime();
-                    return !newKeys.contains(key)
-                            && v.getStatus() == TrainerAvailability.AvailabilityStatus.Available;
-                })
-                .map(TrainerAvailability::getAvailabilityId)
+        /* ---------- 3. 只插入新增的 ---------- */
+        List<TrainerAvailability> toInsert = valid.stream()
+                .filter(s -> s.getAvailabilityId() == null)                // 前端标记为新增
+                .filter(s -> !dbKeys.contains(s.getStartTime() + "_" + s.getEndTime())) // 数据库尚无同段
+                .map(s -> TrainerAvailability.builder()
+                        .trainerId(trainerId)
+                        .startTime(s.getStartTime())
+                        .endTime(s.getEndTime())
+                        .status(TrainerAvailability.AvailabilityStatus.Available)
+                        .build())
                 .collect(Collectors.toList());
-        if (!toDelete.isEmpty()) {
-            this.removeByIds(toDelete);
+
+        if (!toInsert.isEmpty()) {
+            saveBatch(toInsert);
         }
+
+        log.info("Trainer[{}] availability add-only ⇒ inserted {}", trainerId, toInsert.size());
     }
 
 

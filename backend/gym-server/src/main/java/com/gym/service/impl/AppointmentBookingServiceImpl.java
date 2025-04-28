@@ -246,11 +246,11 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
         // 不再修改 TrainerAvailability 状态，因为预约时已锁定
 //        // 5. 更新对应的可用时间状态为 Booked
 //        // 这里太对了！！！
-//        TrainerAvailability availability = trainerAvailabilityService.getById(booking.getAvailabilityId());
-//        if (availability != null) {
-//            availability.setStatus(TrainerAvailability.AvailabilityStatus.Booked);
-//            trainerAvailabilityService.updateById(availability);
-//        }
+        TrainerAvailability availability = trainerAvailabilityService.getById(booking.getAvailabilityId());
+        if (availability != null) {
+            availability.setStatus(TrainerAvailability.AvailabilityStatus.Booked);
+            trainerAvailabilityService.updateById(availability);
+        }
         // 6. 发送通知给学员
         Notification notification = Notification.builder()
                 .userId(booking.getMemberId())
