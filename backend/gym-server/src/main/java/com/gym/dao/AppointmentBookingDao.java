@@ -82,7 +82,7 @@ public interface AppointmentBookingDao extends BaseMapper<AppointmentBooking> {
 
 
     @Select("<script>" +
-            "SELECT DATE(ta.end_time) AS date, COUNT(*) AS hours " +
+            "SELECT DATE(ta.end_time) AS date, COUNT(*) * 0.5 AS hours " +
             "FROM appointment_bookings ab " +
             "JOIN trainer_availability ta ON ab.availability_id = ta.availability_id " +
             "WHERE ab.member_id = #{memberId} " +
@@ -120,7 +120,7 @@ public interface AppointmentBookingDao extends BaseMapper<AppointmentBooking> {
     /* === Trainer dynamic statistics === */
     @Select("<script>" +
             "SELECT DATE(ta.end_time)              AS date, " +
-            "       COUNT(*)                       AS hours " +
+            "       COUNT(*) * 0.5                       AS hours " +
             "FROM appointment_bookings ab " +
                     "JOIN trainer_availability ta " +
                     "     ON ab.availability_id = ta.availability_id " +

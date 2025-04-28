@@ -15,7 +15,7 @@ public class DailyStatisticVO {
      */
     private LocalDate date;
     /**
-     * The number of completed sessions (1 hour each) on that day
+     * 完成的课时数，改成 Double
      */
-    private Integer hours;
+    private Double hours;
 }

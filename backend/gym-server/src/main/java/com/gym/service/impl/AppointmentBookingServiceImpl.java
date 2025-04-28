@@ -552,7 +552,7 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
             DailyStatisticVO stat = dailyStats.stream()
                     .filter(ds -> ds.getDate().equals(currentDate))
                     .findFirst()
-                    .orElse(DailyStatisticVO.builder().date(currentDate).hours(0).build());
+                    .orElse(DailyStatisticVO.builder().date(currentDate).hours(0.0).build());
             completeStats.add(stat);
         }
 
@@ -795,7 +795,7 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
                     .findFirst()
                     .orElse(DailyStatisticVO.builder()
                             .date(cd)
-                            .hours(0)
+                            .hours(0.0)
                             .build());
             complete.add(dayStat);
         }

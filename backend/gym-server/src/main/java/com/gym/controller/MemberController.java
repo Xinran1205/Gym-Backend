@@ -185,6 +185,7 @@ public class MemberController {
      * 动态统计接口：查询当前会员在指定日期范围内的预约统计数据，
      * 返回每天完成的课程小时数（单位：小时）。
      * 前端可用于展示图表，日期范围最大不超过30天。
+     * 每条数据是30min
      *
      * @param startDate 统计开始日期（格式 yyyy-MM-dd）
      * @param endDate   统计结束日期（格式 yyyy-MM-dd）
