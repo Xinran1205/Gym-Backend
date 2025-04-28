@@ -11,10 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,71 +21,63 @@ public class TrainerAvailabilityServiceImpl extends ServiceImpl<TrainerAvailabil
 
     @Override
     @Transactional
-    public void updateAvailability(Long trainerId, List<AvailabilitySlotDTO> newSlots) {
-        // 1. 获取当前时间和一周后时间
+    public void updateAvailability(Long tutorId, List<AvailabilitySlotDTO> newSlots) {
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime oneWeekLater = now.plusWeeks(1);
+        LocalDateTime limit = now.plusDays(7);
 
-        // 2. 过滤前端传来的时间段，确保在规定范围内（也可以在前端限制，这里再做一次校验）
-        List<AvailabilitySlotDTO> filteredNewSlots = newSlots.stream()
-                .filter(slot -> !slot.getStartTime().isBefore(now) && !slot.getEndTime().isAfter(oneWeekLater))
+        // 1. 过滤并校验前端数据
+        List<AvailabilitySlotDTO> valid = newSlots.stream()
+                .filter(s -> !s.getStartTime().isBefore(now)
+                        && !s.getEndTime().isAfter(limit)
+                        && s.getEndTime().isAfter(s.getStartTime()))
                 .collect(Collectors.toList());
 
-        // 3. 查询当前教练在 [now, oneWeekLater] 内已有的可用时间记录
-        LambdaQueryWrapper<TrainerAvailability> query = new LambdaQueryWrapper<>();
-        query.eq(TrainerAvailability::getTrainerId, trainerId)
+        // 2. 查询数据库内已有时段
+        List<TrainerAvailability> existing = lambdaQuery()
+                .eq(TrainerAvailability::getTrainerId, tutorId)
                 .ge(TrainerAvailability::getStartTime, now)
-                .le(TrainerAvailability::getEndTime, oneWeekLater);
-        List<TrainerAvailability> existingAvailabilities = this.list(query);
+                .le(TrainerAvailability::getEndTime, limit)
+                .list();
 
-        // 4. 构建一个以“开始时间_结束时间”为 key 的 Map（注意：格式可根据实际情况调整）
-        Map<String, TrainerAvailability> existingMap = existingAvailabilities.stream()
+        // 3. 用 start_end 作为 key 建 map
+        Map<String, TrainerAvailability> existMap = existing.stream()
                 .collect(Collectors.toMap(
-                        avail -> avail.getStartTime().toString() + "_" + avail.getEndTime().toString(),
-                        avail -> avail
+                        v -> v.getStartTime() + "_" + v.getEndTime(),
+                        v -> v
                 ));
 
-        // 5. 构建前端传来的可用时间的 key 集合
-        Set<String> newSlotKeys = filteredNewSlots.stream()
-                .map(slot -> slot.getStartTime().toString() + "_" + slot.getEndTime().toString())
-                .collect(Collectors.toSet());
-
-        // 6. 新增：对每个前端传来的时间段，如果在已有记录中不存在，则新增
-        List<TrainerAvailability> toInsert = new ArrayList<>();
-        for (AvailabilitySlotDTO slot : filteredNewSlots) {
-            String key = slot.getStartTime().toString() + "_" + slot.getEndTime().toString();
-            if (!existingMap.containsKey(key)) {
-                TrainerAvailability avail = TrainerAvailability.builder()
-                        .trainerId(trainerId)
-                        .startTime(slot.getStartTime())
-                        .endTime(slot.getEndTime())
+        // 4. 新增：对每个前端传来的时段，如果在已有记录中不存在，则新增
+        List<TrainerAvailability> toInsert = valid.stream()
+                .filter(v -> !existMap.containsKey(v.getStartTime() + "_" + v.getEndTime()))
+                .map(v -> TrainerAvailability.builder()
+                        .trainerId(tutorId)
+                        .startTime(v.getStartTime())
+                        .endTime(v.getEndTime())
                         .status(TrainerAvailability.AvailabilityStatus.Available)
-                        .build();
-                toInsert.add(avail);
-            }
-        }
-        // 批量插入数据
+                        .build())
+                .collect(Collectors.toList());
         if (!toInsert.isEmpty()) {
             this.saveBatch(toInsert);
         }
 
-        // 7. 删除：对于数据库中存在但前端未传的时间段，删除它们
-        List<Long> toDeleteIds = existingAvailabilities.stream()
-                .filter(avail -> {
-                    String key = avail.getStartTime().toString() + "_" + avail.getEndTime().toString();
-                    // 这里可以增加判断：如果该时间段已被预约(Booked)则不允许删除（业务逻辑扩展）
-                    return !newSlotKeys.contains(key);
+        // 5. 删除：对数据库中存在但前端未传的时段，且状态是 Available（未被预约）的，删除它们
+        Set<String> newKeys = valid.stream()
+                .map(v -> v.getStartTime() + "_" + v.getEndTime())
+                .collect(Collectors.toSet());
+
+        List<Long> toDelete = existing.stream()
+                .filter(v -> {
+                    String key = v.getStartTime() + "_" + v.getEndTime();
+                    return !newKeys.contains(key)
+                            && v.getStatus() == TrainerAvailability.AvailabilityStatus.Available;
                 })
                 .map(TrainerAvailability::getAvailabilityId)
                 .collect(Collectors.toList());
-        // 批量删除数据
-        if (!toDeleteIds.isEmpty()) {
-            this.removeByIds(toDeleteIds);
+        if (!toDelete.isEmpty()) {
+            this.removeByIds(toDelete);
         }
-
-        log.info("Trainer [{}] availability updated: {} new slots inserted, {} slots deleted",
-                trainerId, toInsert.size(), toDeleteIds.size());
     }
+
 
 
     // 查出教练的所有时间段，包括booked和unavailable（暂时没有unavailable）
