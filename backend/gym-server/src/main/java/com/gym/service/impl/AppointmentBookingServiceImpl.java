@@ -776,9 +776,9 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
             throw new CustomException(ErrorCode.BAD_REQUEST,
                     "Start date must be before or equal to end date.");
         }
-        if (ChronoUnit.DAYS.between(startDate, endDate) > 30) {
+        if (ChronoUnit.DAYS.between(startDate, endDate) > 370) {
             throw new CustomException(ErrorCode.BAD_REQUEST,
-                    "Date range should not exceed 30 days.");
+                    "Date range should not exceed 370 days.");
         }
 
         // ---- 2. DAO 查询 ----
