@@ -21,9 +21,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.redisson.api.RLock;
-import org.redisson.api.RedissonClient;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -95,14 +92,14 @@ class AppointmentBookingServiceImplTest {
         final DynamicAppointmentStatisticsVO expectedResult = DynamicAppointmentStatisticsVO.builder()
                 .dailyStatistics(Arrays.asList(DailyStatisticVO.builder()
                         .date(LocalDate.of(2020, 1, 1))
-                        .hours(0)
+                        .hours(0.0)
                         .build()))
                 .build();
 
         // Configure AppointmentBookingDao.selectDynamicStatisticsByMember(...).
         final List<DailyStatisticVO> dailyStatisticVOS = Arrays.asList(DailyStatisticVO.builder()
                 .date(LocalDate.of(2020, 1, 1))
-                .hours(0)
+                .hours(0.0)
                 .build());
         when(mockAppointmentBookingDao.selectDynamicStatisticsByMember(0L, LocalDate.of(2020, 1, 1),
                 LocalDate.of(2020, 1, 1))).thenReturn(dailyStatisticVOS);
@@ -121,7 +118,7 @@ class AppointmentBookingServiceImplTest {
         final DynamicAppointmentStatisticsVO expectedResult = DynamicAppointmentStatisticsVO.builder()
                 .dailyStatistics(Arrays.asList(DailyStatisticVO.builder()
                         .date(LocalDate.of(2020, 1, 1))
-                        .hours(0)
+                        .hours(0.0)
                         .build()))
                 .build();
         when(mockAppointmentBookingDao.selectDynamicStatisticsByMember(0L, LocalDate.of(2020, 1, 1),
