@@ -18,4 +18,6 @@ public class TrainerAllProfile {
     private LocalDate dateOfBirth;
 
     private String address;
+
+    private String email;
 }

@@ -91,6 +91,7 @@ public class TrainerProfileServiceImpl extends ServiceImpl<TrainerProfileDao, Tr
                 .trainerProfile(trainerProfile)
                 .dateOfBirth(user.getDateOfBirth())// 设置 TrainerProfile 对象
                 .address(user.getAddress())
+                .email(user.getEmail())
                 .build();                               // 构建最终对象
     }
 
