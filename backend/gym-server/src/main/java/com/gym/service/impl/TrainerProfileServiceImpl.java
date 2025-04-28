@@ -71,7 +71,7 @@ public class TrainerProfileServiceImpl extends ServiceImpl<TrainerProfileDao, Tr
         // 根据当前用户ID查询 User 表中的记录
         // 不要的字段不要查询出来
         LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.select(User::getName, User::getDateOfBirth, User::getAddress)
+        queryWrapper.select(User::getName, User::getDateOfBirth, User::getAddress, User::getEmail)
                 .eq(User::getUserID, currentUserId);
         User user = userService.getOne(queryWrapper);
 
