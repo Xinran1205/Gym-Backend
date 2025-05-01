@@ -407,11 +407,11 @@ public class TrainerController {
     public RestResult<?> forceBook(@Valid @RequestBody ForceBookingDTO dto) {
         Long trainerId = SecurityUtils.getCurrentUserId();
         if (trainerId == null) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED, "未登录或会话失效");
+            throw new CustomException(ErrorCode.UNAUTHORIZED, "User is not authenticated or session is invalid.");
         }
         appointmentBookingService.forceBookSession(trainerId, dto);
         log.info("Trainer[{}] force-booked availability[{}] for member[{}]",
                 trainerId, dto.getAvailabilityId(), dto.getMemberId());
-        return RestResult.success(null, "已成功创建并确认预约");
+        return RestResult.success(null, "Force booking created and approved successfully.");
     }
 }
