@@ -8,6 +8,7 @@ import com.gym.dao.AppointmentBookingDao;
 import com.gym.dto.AppointmentBookingDTO;
 import com.gym.dto.AppointmentDecisionDTO;
 import com.gym.dto.AppointmentDecisionRejectDTO;
+import com.gym.dto.ForceBookingDTO;
 import com.gym.entity.*;
 import com.gym.enumeration.ErrorCode;
 import com.gym.exception.CustomException;
@@ -818,6 +819,56 @@ public class AppointmentBookingServiceImpl extends ServiceImpl<AppointmentBookin
 
         booking.setWorkoutPlanId(planId);
         updateById(booking);
+    }
+
+
+    @Override
+    @Transactional
+    public void forceBookSession(Long trainerId, ForceBookingDTO dto) {
+
+        /* ---------- 1. Validate availability slot ---------- */
+        TrainerAvailability slot = trainerAvailabilityService.getById(dto.getAvailabilityId());
+        if (slot == null || !slot.getTrainerId().equals(trainerId)) {
+            throw new CustomException(ErrorCode.NOT_FOUND, "The slot does not exist or does not belong to this trainer");
+        }
+        if (slot.getStatus() != TrainerAvailability.AvailabilityStatus.Available) {
+            throw new CustomException(ErrorCode.BAD_REQUEST, "The slot has already been booked");
+        }
+
+        /* ---------- 2. Validate trainer–member connection ---------- */
+        if (!trainerConnectRequestService.isConnected(dto.getMemberId(), trainerId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN, "The member has not been connected to the trainer");
+        }
+
+        /* ---------- 3. Create booking record (auto-approved) ---------- */
+        AppointmentBooking booking = AppointmentBooking.builder()
+                .memberId(dto.getMemberId())
+                .trainerId(trainerId)
+                .availabilityId(dto.getAvailabilityId())
+                .projectName(
+                        Optional.ofNullable(dto.getProjectName()).orElse("Private Session"))
+                .description(dto.getDescription())
+                .appointmentStatus(AppointmentBooking.AppointmentStatus.Approved)
+                .build();
+        this.save(booking);
+
+        /* ---------- 4. Mark slot as booked ---------- */
+        slot.setStatus(TrainerAvailability.AvailabilityStatus.Booked);
+        trainerAvailabilityService.updateById(slot);
+
+        /* ---------- 5. Notify the member ---------- */
+        notificationService.sendNotification(Notification.builder()
+                .userId(dto.getMemberId())
+                .title("Session Confirmed")
+                .message("Your trainer has scheduled a session on "
+                        + slot.getStartTime() + " – " + slot.getEndTime()
+                        + ". The booking is already confirmed.")
+                .type(Notification.NotificationType.INFO)
+                .isRead(false)
+                .build());
+
+        log.info("Force-booking completed | bookingId={}, trainerId={}, memberId={}",
+                booking.getAppointmentId(), trainerId, dto.getMemberId());
     }
 }
 
