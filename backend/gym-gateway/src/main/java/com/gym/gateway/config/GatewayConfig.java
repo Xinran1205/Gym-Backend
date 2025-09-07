@@ -1,8 +1,5 @@
 package com.gym.gateway.config;
 
-import com.gym.gateway.filter.AuthGlobalFilter;
-import com.gym.gateway.filter.LoggingGlobalFilter;
-import com.gym.gateway.filter.SecurityHeadersGlobalFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
@@ -51,8 +48,13 @@ public class GatewayConfig {
                 ServerHttpResponse response = ctx.getResponse();
                 HttpHeaders headers = response.getHeaders();
                 
-                // 设置跨域响应头
-                headers.add("Access-Control-Allow-Origin", "*");  // 允许所有来源
+                // 设置跨域响应头 - 修复CORS配置冲突
+                String origin = request.getHeaders().getOrigin();
+                if (origin != null) {
+                    headers.add("Access-Control-Allow-Origin", origin);  // 动态设置来源
+                } else {
+                    headers.add("Access-Control-Allow-Origin", "http://localhost:5173");  // 默认前端地址
+                }
                 headers.add("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, OPTIONS");
                 headers.add("Access-Control-Max-Age", "18000");   // 预检缓存时长30分钟
                 headers.add("Access-Control-Allow-Headers", "*"); // 允许所有请求头
@@ -71,49 +73,7 @@ public class GatewayConfig {
         };
     }
 
-    /**
-     * 注册认证全局过滤器
-     * 
-     * 功能：
-     * - JWT token验证
-     * - 用户身份识别
-     * - 权限检查
-     * 
-     * @return AuthGlobalFilter 认证过滤器实例
-     */
-    @Bean
-    public AuthGlobalFilter authGlobalFilter() {
-        return new AuthGlobalFilter();
-    }
-
-    /**
-     * 注册日志记录全局过滤器
-     * 
-     * 功能：
-     * - 请求响应日志记录
-     * - 性能监控
-     * - 链路追踪
-     * 
-     * @return LoggingGlobalFilter 日志过滤器实例
-     */
-    @Bean
-    public LoggingGlobalFilter loggingGlobalFilter() {
-        return new LoggingGlobalFilter();
-    }
-
-    /**
-     * 注册安全头全局过滤器
-     * 
-     * 功能：
-     * - 注入HTTP安全响应头
-     * - 防止常见Web攻击
-     * - 提升应用安全性
-     * 
-     * @return SecurityHeadersGlobalFilter 安全头过滤器实例
-     */
-    @Bean
-    public SecurityHeadersGlobalFilter securityHeadersGlobalFilter() {
-        return new SecurityHeadersGlobalFilter();
-    }
+    // 注意：AuthGlobalFilter、LoggingGlobalFilter、SecurityHeadersGlobalFilter 
+    // 已经通过 @Component 注解自动注册，无需在此重复定义
 }
 

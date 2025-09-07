@@ -51,25 +51,33 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
     /** 
      * 白名单路径 - 这些路径不需要认证
-     * 包括：
-     * - 用户注册登录相关
-     * - 健康检查
-     * - API文档
-     * - 静态资源
+     * 统一管理所有不需要认证的路径
      */
     private final List<String> whitelistPaths = Arrays.asList(
-            "/auth/login",           // 登录
-            "/auth/register",        // 注册
-            "/auth/forgot-password", // 忘记密码
-            "/auth/reset-password",  // 重置密码
-            "/auth/google-login",    // Google登录
+            // 认证相关接口 (gym-auth 服务)
+            "/auth/**",              // 所有认证相关接口
+            
+            // 业务服务中的公开接口 (gym-server 服务)
+            "/api/user/signup",      // 用户注册
+            "/api/user/verify-code", // 验证码验证
+            "/api/user/login",       // 用户登录
+            "/api/user/forgot-password", // 忘记密码
+            "/api/user/reset-password",  // 重置密码
+            "/api/user/google-login",    // Google登录
+            
+            // 系统接口
             "/health/**",            // 健康检查
             "/actuator/**",          // 监控端点
-            "/doc.html",             // API文档
+            
+            // API文档 (开发环境)
+            "/doc.html",             // API文档首页
             "/swagger-resources/**", // Swagger资源
             "/webjars/**",           // Web资源
-            "/v2/api-docs",          // API文档
-            "/static/**"             // 静态资源
+            "/v2/api-docs",          // API文档接口
+            "/static/**",            // 静态资源
+            
+            // 网关路由端点（用于查看路由信息）
+            "/actuator/gateway/**"   // 网关路由查看端点
     );
 
     /**
@@ -84,11 +92,11 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getPath().value();
         
-        log.debug("认证过滤器处理请求: {} {}", request.getMethod(), path);
+        log.info("认证过滤器处理请求: {} {}", request.getMethod(), path);
 
         // 检查是否为白名单路径
         if (isWhitelistPath(path)) {
-            log.debug("白名单路径，跳过认证: {}", path);
+            log.info("白名单路径，跳过认证: {}", path);
             return chain.filter(exchange);
         }
 

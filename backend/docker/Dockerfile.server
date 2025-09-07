@@ -1,0 +1,14 @@
+# 业务服务 Dockerfile - 使用本地构建
+FROM openjdk:8-jre-alpine
+
+WORKDIR /app
+
+# 复制已编译的jar文件
+COPY gym-server/target/gym-server-1.0-SNAPSHOT.jar app.jar
+
+# 暴露端口
+EXPOSE 8080
+
+# 启动应用
+CMD ["java", "-jar", "app.jar"]
+

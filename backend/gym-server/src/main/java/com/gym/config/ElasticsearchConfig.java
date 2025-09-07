@@ -6,7 +6,6 @@ import org.elasticsearch.client.RestHighLevelClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.elasticsearch.config.AbstractElasticsearchConfiguration;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
 import org.springframework.data.elasticsearch.repository.config.EnableElasticsearchRepositories;
@@ -32,7 +31,7 @@ import org.springframework.data.elasticsearch.repository.config.EnableElasticsea
  */
 @Configuration
 @EnableElasticsearchRepositories(basePackages = "com.gym.es.repository")
-public class ElasticsearchConfig extends AbstractElasticsearchConfiguration {
+public class ElasticsearchConfig {
 
     /** ES服务器主机地址 */
     @Value("${elasticsearch.host:localhost}")
@@ -65,7 +64,6 @@ public class ElasticsearchConfig extends AbstractElasticsearchConfiguration {
      * 
      * @return RestHighLevelClient ES高级客户端
      */
-    @Override
     @Bean
     public RestHighLevelClient elasticsearchClient() {
         return new RestHighLevelClient(
@@ -99,8 +97,19 @@ public class ElasticsearchConfig extends AbstractElasticsearchConfiguration {
      * @return ElasticsearchOperations ES操作接口
      */
     @Bean
+    public ElasticsearchOperations elasticsearchOperations() {
+        return new ElasticsearchRestTemplate(elasticsearchClient());
+    }
+
+    /**
+     * 配置Elasticsearch模板（别名）
+     * 
+     * 为了兼容性，提供elasticsearchTemplate别名
+     * 
+     * @return ElasticsearchOperations ES操作接口
+     */
+    @Bean(name = "elasticsearchTemplate")
     public ElasticsearchOperations elasticsearchTemplate() {
         return new ElasticsearchRestTemplate(elasticsearchClient());
     }
 }
-

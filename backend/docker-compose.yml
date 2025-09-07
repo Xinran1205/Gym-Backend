@@ -1,0 +1,161 @@
+services:
+  # ================================
+  # 基础设施服务
+  # ================================
+  
+  # 注释掉MySQL服务，使用远程数据库
+  # mysql:
+  #   image: mysql:8.0
+  #   container_name: gym-mysql
+  #   restart: always
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: root123456
+  #     MYSQL_DATABASE: gym_database
+  #     MYSQL_USER: gym_user
+  #     MYSQL_PASSWORD: gym123456
+  #     TZ: Asia/Shanghai
+  #   ports:
+  #     - "3306:3306"
+  #   volumes:
+  #     - mysql_data:/var/lib/mysql
+  #     - ./docker/mysql/init:/docker-entrypoint-initdb.d
+  #   command: --default-authentication-plugin=mysql_native_password
+  #   networks:
+  #     - gym-network
+
+  # Redis 缓存
+  redis:
+    image: redis:7.0-alpine
+    container_name: gym-redis
+    restart: always
+    command: redis-server --requirepass root123456
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - gym-network
+
+  # Elasticsearch 搜索引擎
+  elasticsearch:
+    image: elasticsearch:7.17.9
+    container_name: gym-elasticsearch
+    restart: always
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    networks:
+      - gym-network
+
+  # Nacos 注册中心和配置中心 (使用嵌入式数据库)
+  nacos:
+    image: nacos/nacos-server:v2.1.0
+    container_name: gym-nacos
+    restart: always
+    environment:
+      - PREFER_HOST_MODE=hostname
+      - MODE=standalone
+      - JVM_XMS=256m
+      - JVM_XMX=256m
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+    volumes:
+      - nacos_logs:/home/nacos/logs
+    networks:
+      - gym-network
+
+  # ================================
+  # 微服务应用
+  # ================================
+
+  # 认证服务
+  gym-auth:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.auth
+    container_name: gym-auth-service
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - NACOS_SERVER_ADDR=nacos:8848
+      - MYSQL_HOST=118.178.144.106
+      # - REDIS_HOST=redis  # Redis已禁用
+    depends_on:
+      # - redis  # Redis已禁用
+      - nacos
+    networks:
+      - gym-network
+
+  # 网关服务
+  gym-gateway:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.gateway
+    container_name: gym-gateway-service
+    restart: always
+    ports:
+      - "8888:8888"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - NACOS_SERVER_ADDR=nacos:8848
+      # - REDIS_HOST=redis  # Redis已禁用
+    depends_on:
+      - nacos
+      # - redis  # Redis已禁用
+      - gym-auth
+    networks:
+      - gym-network
+
+  # 业务服务
+  gym-server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.server
+    container_name: gym-server-service
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - NACOS_SERVER_ADDR=nacos:8848
+      - MYSQL_HOST=118.178.144.106
+      - REDIS_HOST=redis
+      - ELASTICSEARCH_HOST=elasticsearch
+    depends_on:
+      - redis
+      - elasticsearch
+      - nacos
+    networks:
+      - gym-network
+
+# ================================
+# 数据卷
+# ================================
+volumes:
+  # mysql_data:  # 不再需要本地MySQL数据卷
+  #   driver: local
+  redis_data:
+    driver: local
+  es_data:
+    driver: local
+  nacos_logs:
+    driver: local
+
+# ================================
+# 网络配置
+# ================================
+networks:
+  gym-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

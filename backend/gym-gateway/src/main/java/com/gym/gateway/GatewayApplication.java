@@ -4,6 +4,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 
 /**
  * 健身房管理系统网关启动类
@@ -17,9 +19,24 @@ import org.springframework.cloud.context.config.annotation.RefreshScope;
  * @author gym-system
  * @version 1.0
  */
-@SpringBootApplication
+@SpringBootApplication(exclude = {
+    org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration.class,
+    org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration.class,
+    org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration.class,
+    org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration.class,
+    org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration.class,
+    com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration.class,
+    com.baomidou.mybatisplus.autoconfigure.IdentifierGeneratorAutoConfiguration.class
+})
 @EnableDiscoveryClient  // 启用服务发现功能，与Nacos注册中心集成
 @RefreshScope          // 支持配置动态刷新，无需重启即可更新配置
+@ComponentScan(
+    basePackages = {"com.gym"},
+    excludeFilters = @ComponentScan.Filter(
+        type = FilterType.ASSIGNABLE_TYPE, 
+        classes = {com.gym.util.TencentCaptchaUtil.class}
+    )
+)  // 扫描公共模块的组件，排除腾讯验证码工具类
 public class GatewayApplication {
 
     /**

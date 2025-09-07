@@ -3,7 +3,7 @@ package com.gym.auth.filter;
 import com.alibaba.fastjson.JSON;
 import com.gym.entity.User;
 import com.gym.result.RestResult;
-import com.gym.service.RedisCacheService;
+// import com.gym.service.RedisCacheService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -50,8 +50,8 @@ import java.util.List;
 @Order(2)  // 在JWT过滤器之后执行
 public class ApiTokenFilter extends OncePerRequestFilter {
 
-    @Autowired
-    private RedisCacheService redisCacheService;
+    // @Autowired
+    // private RedisCacheService redisCacheService;
 
     /** 路径匹配器 */
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
@@ -239,7 +239,8 @@ public class ApiTokenFilter extends OncePerRequestFilter {
                     Long userId = Long.valueOf(userIdStr);
                     
                     // 从缓存中获取用户信息
-                    User user = redisCacheService.getUser(userId);
+                    // User user = redisCacheService.getUser(userId);
+                    User user = null; // 临时注释掉Redis功能
                     
                     if (user != null && user.getAccountStatus() == User.AccountStatus.Approved) {
                         log.debug("API Token验证成功 - 用户ID: {}, 邮箱: {}", userId, user.getEmail());

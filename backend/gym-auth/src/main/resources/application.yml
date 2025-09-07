@@ -1,0 +1,163 @@
+# ================================
+# 健身房认证服务配置
+# ================================
+
+server:
+  port: 8081
+
+spring:
+  application:
+    name: gym-auth  # 服务名称，用于服务注册
+
+  # ================================
+  # 数据源配置
+  # ================================
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST:118.178.144.106}:3306/gym_database?serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true
+    username: gym_database
+    password: 4waxiFiWAX2SSpZS
+    
+    # Druid连接池配置
+    druid:
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      max-wait: 60000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      validation-query: SELECT 1 FROM DUAL
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+
+  # ================================
+  # Redis配置 - 已禁用
+  # ================================
+  # redis:
+  #   host: ${REDIS_HOST:localhost}
+  #   port: 6379
+  #   password: root123456
+  #   timeout: 3000ms
+  #   lettuce:
+  #     pool:
+  #       max-active: 8
+  #       max-idle: 8
+  #       min-idle: 0
+
+  # ================================
+  # Nacos服务发现配置
+  # ================================
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        namespace: gym-system
+        group: DEFAULT_GROUP
+        cluster-name: default
+        metadata:
+          version: 1.0.0
+          zone: zone1
+      config:
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        namespace: gym-system
+        group: DEFAULT_GROUP
+        file-extension: yml
+
+  # ================================
+  # 邮件配置
+  # ================================
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: wxinran543@gmail.com
+    password: dlgyysvqolbcljep
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          debug: false
+
+# ================================
+# JWT配置
+# ================================
+jwt:
+  secret: "YourJWTSecretKey123456789"
+  expiration: 86400000  # 24小时
+
+# ================================
+# MyBatis Plus配置
+# ================================
+mybatis-plus:
+  mapper-locations: classpath*:mapper/*.xml
+  type-aliases-package: com.gym.entity
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true
+
+# ================================
+# 腾讯验证码配置
+# ================================
+tencent:
+  captcha:
+
+# ================================
+# Google OAuth配置
+# ================================
+google:
+  clientId: "642557482063-q866pb3tlp0blvso126q2i2si40qn6oh.apps.googleusercontent.com"
+
+# ================================
+# 监控配置
+# ================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+
+# ================================
+# 日志配置
+# ================================
+logging:
+  level:
+    com.gym.auth: DEBUG
+    org.springframework.cloud: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%logger{50}] - %msg%n"
+
+# ================================
+# Swagger配置 - 禁用API文档
+# ================================
+springfox:
+  documentation:
+    enabled: false
+knife4j:
+  enable: false
+
+---
+# ================================
+# Docker环境配置
+# ================================
+spring:
+  config:
+    activate:
+      on-profile: docker
+  datasource:
+    url: jdbc:mysql://118.178.144.106:3306/gym_database?serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true
+    username: gym_database
+    password: 4waxiFiWAX2SSpZS
+  # redis:
+  #   host: redis
+  cloud:
+    nacos:
+      discovery:
+        server-addr: nacos:8848
+      config:
+        server-addr: nacos:8848

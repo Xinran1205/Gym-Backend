@@ -16,7 +16,7 @@ spring:
     # Nacos 服务发现配置
     nacos:
       discovery:
-        server-addr: localhost:8848  # Nacos服务器地址
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}  # Nacos服务器地址
         namespace: gym-system        # 命名空间，用于环境隔离
         group: DEFAULT_GROUP         # 服务分组
         cluster-name: default        # 集群名称
@@ -24,7 +24,7 @@ spring:
           version: 1.0.0            # 服务版本
           zone: zone1               # 服务区域
       config:
-        server-addr: localhost:8848  # 配置中心地址
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}  # 配置中心地址
         namespace: gym-system
         group: DEFAULT_GROUP
         file-extension: yml
@@ -34,18 +34,18 @@ spring:
       # 服务发现路由
       discovery:
         locator:
-          enabled: true              # 启用服务发现路由
+          enabled: true              # 启用自动服务发现路由
           lower-case-service-id: true # 服务名小写
           
       # 全局跨域配置
       globalcors:
         cors-configurations:
           '[/**]':  # 匹配所有路径
-            allowed-origins: "*"     # 允许所有来源
-            allowed-methods: "*"     # 允许所有HTTP方法
-            allowed-headers: "*"     # 允许所有请求头
-            allow-credentials: true  # 允许携带认证信息
-            max-age: 3600           # 预检请求缓存时间
+            allowed-origin-patterns: "*"  # 使用origin patterns替代origins
+            allowed-methods: "*"          # 允许所有HTTP方法
+            allowed-headers: "*"          # 允许所有请求头
+            allow-credentials: true       # 允许携带认证信息
+            max-age: 3600                # 预检请求缓存时间
 
       # 默认过滤器
       default-filters:
@@ -61,18 +61,18 @@ spring:
               basedOnPreviousValue: false
 
   # ================================
-  # Redis 配置 (用于限流等功能)
+  # Redis 配置 (用于限流等功能) - 已禁用
   # ================================
-  redis:
-    host: localhost
-    port: 6379
-    password: 
-    timeout: 3000ms
-    lettuce:
-      pool:
-        max-active: 8
-        max-idle: 8
-        min-idle: 0
+  # redis:
+  #   host: ${REDIS_HOST:localhost}
+  #   port: 6379
+  #   password: root123456
+  #   timeout: 3000ms
+  #   lettuce:
+  #     pool:
+  #       max-active: 8
+  #       max-idle: 8
+  #       min-idle: 0
 
 # ================================
 # 监控配置
@@ -82,9 +82,14 @@ management:
     web:
       exposure:
         include: "*"  # 暴露所有监控端点
+      base-path: /actuator  # 设置监控端点基础路径
   endpoint:
     health:
       show-details: always  # 显示详细健康信息
+    gateway:
+      enabled: true  # 启用网关端点
+  security:
+    enabled: false  # 禁用监控端点的安全认证
 
 # ================================
 # 灰度发布配置
@@ -112,8 +117,19 @@ logging:
   level:
     com.gym.gateway: DEBUG     # 网关日志级别
     org.springframework.cloud.gateway: DEBUG  # Gateway框架日志
+    org.springframework.cloud.gateway.handler.RoutePredicateHandlerMapping: DEBUG  # 路由匹配日志
+    org.springframework.cloud.gateway.route: DEBUG  # 路由详细日志
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%logger{50}] - %msg%n"
+
+# ================================
+# Swagger配置 - 禁用API文档
+# ================================
+springfox:
+  documentation:
+    enabled: false
+knife4j:
+  enable: false
 
 # ================================
 # 熔断器配置 (Resilience4j)
@@ -157,4 +173,21 @@ resilience4j:
         wait-duration: 500ms
         retry-exceptions:
           - java.net.ConnectException
+
+---
+# ================================
+# Docker环境配置
+# ================================
+spring:
+  config:
+    activate:
+      on-profile: docker
+  # redis:
+  #   host: redis
+  cloud:
+    nacos:
+      discovery:
+        server-addr: nacos:8848
+      config:
+        server-addr: nacos:8848
 

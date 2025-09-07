@@ -2,6 +2,7 @@ package com.gym.gateway.controller;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -168,7 +169,7 @@ public class HealthController {
             Map<String, Object> serviceDetails = new HashMap<>();
             for (String serviceName : services) {
                 try {
-                    var instances = discoveryClient.getInstances(serviceName);
+                    List<ServiceInstance> instances = discoveryClient.getInstances(serviceName);
                     serviceDetails.put(serviceName, instances.size() + " instances");
                 } catch (Exception e) {
                     serviceDetails.put(serviceName, "error: " + e.getMessage());

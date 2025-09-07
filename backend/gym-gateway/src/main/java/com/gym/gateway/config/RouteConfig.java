@@ -63,6 +63,8 @@ public class RouteConfig {
                                 .filter(canaryFilterFactory.apply(new CanaryGatewayFilterFactory.Config()))
                                 .retry(retryConfig -> retryConfig
                                         .setRetries(2)
+                                        .setMethods(org.springframework.http.HttpMethod.GET, 
+                                                   org.springframework.http.HttpMethod.POST)
                                         .setBackoff(java.time.Duration.ofMillis(500), 
                                                    java.time.Duration.ofSeconds(2), 2, false)))
                         .uri("lb://gym-server"))

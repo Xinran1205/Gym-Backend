@@ -55,13 +55,13 @@ public class ESTrainerDocument {
     private Long userId;
 
     /**
-     * 教练姓名 - 支持中文分词搜索
+     * 教练姓名 - 支持分词搜索
      */
     @Field(
         type = FieldType.Text, 
         name = "name",
-        analyzer = "ik_max_word",      // 索引时使用最细分词
-        searchAnalyzer = "ik_smart"    // 搜索时使用智能分词
+        analyzer = "standard",         // 索引时使用标准分词
+        searchAnalyzer = "standard"    // 搜索时使用标准分词
     )
     private String name;
 
@@ -74,7 +74,7 @@ public class ESTrainerDocument {
     /**
      * 认证资质 - 全文搜索字段
      */
-    @Field(type = FieldType.Text, name = "certifications", analyzer = "ik_max_word")
+    @Field(type = FieldType.Text, name = "certifications", analyzer = "standard")
     private String certifications;
 
     /**
@@ -86,7 +86,7 @@ public class ESTrainerDocument {
     /**
      * 个人简介 - 全文搜索字段
      */
-    @Field(type = FieldType.Text, name = "biography", analyzer = "ik_max_word")
+    @Field(type = FieldType.Text, name = "biography", analyzer = "standard")
     private String biography;
 
     /**

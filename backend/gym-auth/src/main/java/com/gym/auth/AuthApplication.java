@@ -3,6 +3,7 @@ package com.gym.auth;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.ComponentScan;
 
 /**
@@ -22,8 +23,13 @@ import org.springframework.context.annotation.ComponentScan;
  * @author gym-system
  * @version 1.0
  */
-@SpringBootApplication
+@SpringBootApplication(exclude = {
+    org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration.class,
+    org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration.class,
+    org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration.class
+})
 @EnableDiscoveryClient  // 启用服务发现功能
+@EnableFeignClients     // 启用Feign客户端
 @ComponentScan(basePackages = {"com.gym"})  // 扫描公共模块的组件
 public class AuthApplication {
 
