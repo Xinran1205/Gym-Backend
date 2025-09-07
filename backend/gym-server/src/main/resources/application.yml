@@ -50,11 +50,42 @@ knife4j:
   locale: en
 
 tencent:
+  captcha:
 
 
 
 google:
   clientId: "642557482063-q866pb3tlp0blvso126q2i2si40qn6oh.apps.googleusercontent.com"
+
+# Elasticsearch 配置
+elasticsearch:
+  host: localhost
+  port: 9200
+  scheme: http
+  connection-timeout: 5000
+  socket-timeout: 60000
+
+# 健身房ES业务配置
+gym:
+  elasticsearch:
+    # 是否启用ES功能
+    enabled: true
+    # 索引配置
+    index:
+      trainer:
+        name: gym_trainers
+        shards: 3
+        replicas: 1
+        refresh-interval: 1s
+    # 数据同步配置
+    sync:
+      enabled: true
+      batch-size: 100
+      retry-times: 3
+      # 增量同步间隔（分钟）
+      incremental-interval: 5
+      # 全量同步时间（cron表达式）
+      full-sync-cron: "0 0 2 * * ?"
 
 #server:
 #  port: 8080

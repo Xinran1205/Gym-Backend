@@ -1,0 +1,160 @@
+# ================================
+# 健身房管理系统网关配置
+# ================================
+
+server:
+  port: 8888  # 网关端口
+
+spring:
+  application:
+    name: gym-gateway  # 应用名称，用于服务注册
+
+  # ================================
+  # Spring Cloud Gateway 配置
+  # ================================
+  cloud:
+    # Nacos 服务发现配置
+    nacos:
+      discovery:
+        server-addr: localhost:8848  # Nacos服务器地址
+        namespace: gym-system        # 命名空间，用于环境隔离
+        group: DEFAULT_GROUP         # 服务分组
+        cluster-name: default        # 集群名称
+        metadata:
+          version: 1.0.0            # 服务版本
+          zone: zone1               # 服务区域
+      config:
+        server-addr: localhost:8848  # 配置中心地址
+        namespace: gym-system
+        group: DEFAULT_GROUP
+        file-extension: yml
+
+    # Gateway 路由配置
+    gateway:
+      # 服务发现路由
+      discovery:
+        locator:
+          enabled: true              # 启用服务发现路由
+          lower-case-service-id: true # 服务名小写
+          
+      # 全局跨域配置
+      globalcors:
+        cors-configurations:
+          '[/**]':  # 匹配所有路径
+            allowed-origins: "*"     # 允许所有来源
+            allowed-methods: "*"     # 允许所有HTTP方法
+            allowed-headers: "*"     # 允许所有请求头
+            allow-credentials: true  # 允许携带认证信息
+            max-age: 3600           # 预检请求缓存时间
+
+      # 默认过滤器
+      default-filters:
+        - name: Retry              # 重试过滤器
+          args:
+            retries: 3             # 重试次数
+            statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE
+            methods: GET,POST
+            backoff:
+              firstBackoff: 10ms
+              maxBackoff: 50ms
+              factor: 2
+              basedOnPreviousValue: false
+
+  # ================================
+  # Redis 配置 (用于限流等功能)
+  # ================================
+  redis:
+    host: localhost
+    port: 6379
+    password: 
+    timeout: 3000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+
+# ================================
+# 监控配置
+# ================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"  # 暴露所有监控端点
+  endpoint:
+    health:
+      show-details: always  # 显示详细健康信息
+
+# ================================
+# 灰度发布配置
+# ================================
+canary:
+  enabled: true                    # 启用灰度发布
+  header-key: X-Canary-Flag       # 灰度标识请求头
+  header-values: canary,test,beta  # 灰度标识值
+  ip-whitelist: 127.0.0.1,::1     # 灰度IP白名单
+  external-url:
+    enabled: false                 # 是否启用外部URL
+    target: ""                     # 外部灰度URL
+
+# ================================
+# JWT 配置
+# ================================
+jwt:
+  secret: "YourJWTSecretKey"  # JWT签名密钥，生产环境请使用更安全的密钥
+  expiration: 86400000        # Token过期时间(毫秒) - 24小时
+
+# ================================
+# 日志配置
+# ================================
+logging:
+  level:
+    com.gym.gateway: DEBUG     # 网关日志级别
+    org.springframework.cloud.gateway: DEBUG  # Gateway框架日志
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%logger{50}] - %msg%n"
+
+# ================================
+# 熔断器配置 (Resilience4j)
+# ================================
+resilience4j:
+  circuitbreaker:
+    instances:
+      gym-auth-cb:               # 认证服务熔断器
+        failure-rate-threshold: 50          # 失败率阈值 50%
+        minimum-number-of-calls: 10         # 最小调用次数
+        sliding-window-size: 20             # 滑动窗口大小
+        wait-duration-in-open-state: 30s    # 熔断器打开等待时间
+        permitted-number-of-calls-in-half-open-state: 5  # 半开状态允许调用次数
+        
+      gym-server-cb:             # 业务服务熔断器
+        failure-rate-threshold: 60
+        minimum-number-of-calls: 5
+        sliding-window-size: 15
+        wait-duration-in-open-state: 20s
+        permitted-number-of-calls-in-half-open-state: 3
+        
+      gym-server-admin-cb:       # 管理服务熔断器
+        failure-rate-threshold: 40
+        minimum-number-of-calls: 8
+        sliding-window-size: 25
+        wait-duration-in-open-state: 45s
+        permitted-number-of-calls-in-half-open-state: 6
+
+  # 重试配置
+  retry:
+    instances:
+      gym-auth-retry:
+        max-attempts: 3          # 最大重试次数
+        wait-duration: 1s        # 重试间隔
+        retry-exceptions:
+          - java.net.ConnectException
+          - java.net.SocketTimeoutException
+          
+      gym-server-retry:
+        max-attempts: 2
+        wait-duration: 500ms
+        retry-exceptions:
+          - java.net.ConnectException
+

@@ -16,6 +16,8 @@
         <module>gym-common</module>
         <module>gym-pojo</module>
         <module>gym-server</module>
+        <module>gym-gateway</module>
+        <module>gym-auth</module>
     </modules>
     <properties>
         <mybatis.spring>2.2.0</mybatis.spring>
@@ -30,9 +32,33 @@
         <jjwt>0.9.1</jjwt>
         <jaxb-api>2.3.1</jaxb-api>
         <poi>3.16</poi>
+        <!-- 新增微服务相关版本 -->
+        <spring-cloud.version>2021.0.3</spring-cloud.version>
+        <spring-cloud-alibaba.version>2021.0.1.0</spring-cloud-alibaba.version>
+        <nacos.version>2.1.0</nacos.version>
+        <!-- Elasticsearch版本 -->
+        <elasticsearch.version>7.17.9</elasticsearch.version>
     </properties>
     <dependencyManagement>
         <dependencies>
+            <!-- Spring Cloud 依赖管理 -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            
+            <!-- Spring Cloud Alibaba 依赖管理 -->
+            <dependency>
+                <groupId>com.alibaba.cloud</groupId>
+                <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+                <version>${spring-cloud-alibaba.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            
             <dependency>
                 <groupId>org.mybatis.spring.boot</groupId>
                 <artifactId>mybatis-spring-boot-starter</artifactId>
@@ -188,6 +214,18 @@
                 <scope>test</scope>
             </dependency>
 
+            <!-- Elasticsearch 依赖 -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
+                <version>2.7.3</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.elasticsearch.client</groupId>
+                <artifactId>elasticsearch-rest-high-level-client</artifactId>
+                <version>${elasticsearch.version}</version>
+            </dependency>
 
         </dependencies>
     </dependencyManagement>

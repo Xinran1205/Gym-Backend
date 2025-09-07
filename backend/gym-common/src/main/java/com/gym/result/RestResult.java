@@ -15,11 +15,26 @@ public class RestResult<T> {
 
     private Map map = new HashMap(); // Dynamic data
 
+    public static <T> RestResult<T> success(T object) {
+        RestResult<T> r = new RestResult<T>();
+        r.message = "操作成功";
+        r.data = object;
+        r.code = 200;
+        return r;
+    }
+
     public static <T> RestResult<T> success(T object, String msg) {
         RestResult<T> r = new RestResult<T>();
         r.message = msg;
         r.data = object;
         r.code = 200;
+        return r;
+    }
+
+    public static <T> RestResult<T> error(String msg) {
+        RestResult r = new RestResult();
+        r.message = msg;
+        r.code = 500;
         return r;
     }
 
